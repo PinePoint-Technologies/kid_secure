@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/providers/firebase_providers.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../core/router/app_router.dart';
@@ -10,7 +9,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../shared/models/user_model.dart';
 import '../auth/providers/auth_provider.dart';
-import '../onboarding/onboarding_screen.dart' show onboardingKeyForRole;
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -30,40 +28,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _navigate() async {
     await Future.delayed(const Duration(milliseconds: 2200));
     if (!mounted) return;
-
-    // Await proper resolution — never read a loading snapshot
-    final user = await ref.read(authStateProvider.future);
-    if (!mounted) return;
-
-    if (user == null) {
-      context.go(AppRoutes.login);
-      return;
-    }
-
-    final profile = await ref.read(currentUserProvider.future);
-    if (!mounted) return;
-
-    if (profile == null) {
-      context.go(AppRoutes.login);
-      return;
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-
-    final onboardingDone =
-        prefs.getBool(onboardingKeyForRole(profile.role)) ?? false;
-
-    if (!onboardingDone) {
-      context.go(AppRoutes.onboarding);
-      return;
-    }
-
-    context.go(switch (profile.role) {
-      UserRole.superAdmin => AppRoutes.superAdmin,
-      UserRole.teacher => AppRoutes.teacher,
-      UserRole.parent => AppRoutes.parent,
-    });
+    final authState = ref.read(authStateProvider);
+    authState.when(
+      data: (user) async {
+        if (user == null) {
+          context.go(AppRoutes.login);
+          return;
+        }
+        final profile = ref.read(currentUserProvider).valueOrNull;
+        if (profile == null) {
+          context.go(AppRoutes.login);
+          return;
+        }
+        context.go(switch (profile.role) {
+          UserRole.superAdmin => AppRoutes.superAdmin,
+          UserRole.teacher => AppRoutes.teacher,
+          UserRole.parent => AppRoutes.parent,
+        });
+      },
+      loading: () => context.go(AppRoutes.login),
+      error: (_, __) => context.go(AppRoutes.login),
+    );
   }
 
   @override
