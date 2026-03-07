@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -29,6 +30,11 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
   final _regCtrl = TextEditingController();
   int _capacity = 30;
 
+  double? _latitude;
+  double? _longitude;
+  double _geofenceRadius = 200;
+  bool _fetchingLocation = false;
+
   bool get isEditing => widget.crecheId != null;
 
   @override
@@ -40,6 +46,52 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _fetchLocation() async {
+    setState(() => _fetchingLocation = true);
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location permission denied. Enable it in settings.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      if (mounted) {
+        setState(() {
+          _latitude = pos.latitude;
+          _longitude = pos.longitude;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not get location: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _fetchingLocation = false);
+    }
   }
 
   Future<void> _save() async {
@@ -59,6 +111,9 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
       registrationNumber:
           _regCtrl.text.trim().isEmpty ? null : _regCtrl.text.trim(),
       capacity: _capacity,
+      latitude: _latitude,
+      longitude: _longitude,
+      geofenceRadiusMeters: _geofenceRadius,
       createdAt: DateTime.now(),
     );
 
@@ -123,6 +178,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
                 icon: Icons.numbers_rounded,
               ).animate(delay: 50.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 24),
+
               _sectionHeader('Location'),
               const SizedBox(height: 12),
               _field(
@@ -158,7 +214,22 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
                 icon: Icons.mail_outline_rounded,
                 keyboardType: TextInputType.number,
               ).animate(delay: 160.ms).fadeIn(duration: 400.ms),
+              const SizedBox(height: 20),
+
+              // ── GPS ─────────────────────────────────────────────────────
+              _sectionHeader('GPS Coordinates'),
+              const SizedBox(height: 12),
+              _GpsCard(
+                latitude: _latitude,
+                longitude: _longitude,
+                isFetching: _fetchingLocation,
+                onFetch: _fetchLocation,
+                geofenceRadius: _geofenceRadius,
+                onRadiusChanged: (v) =>
+                    setState(() => _geofenceRadius = v),
+              ).animate(delay: 180.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 24),
+
               _sectionHeader('Contact'),
               const SizedBox(height: 12),
               _field(
@@ -175,6 +246,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
                 keyboardType: TextInputType.emailAddress,
               ).animate(delay: 220.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 24),
+
               _sectionHeader('Capacity'),
               const SizedBox(height: 12),
               Row(
@@ -232,7 +304,115 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
           prefixIcon: Icon(icon),
         ),
         validator: required
-            ? (v) => (v == null || v.trim().isEmpty) ? '$label is required' : null
+            ? (v) =>
+                (v == null || v.trim().isEmpty) ? '$label is required' : null
             : null,
       );
+}
+
+// ─── GPS card widget ──────────────────────────────────────────────────────────
+
+class _GpsCard extends StatelessWidget {
+  final double? latitude;
+  final double? longitude;
+  final bool isFetching;
+  final VoidCallback onFetch;
+  final double geofenceRadius;
+  final ValueChanged<double> onRadiusChanged;
+
+  const _GpsCard({
+    required this.latitude,
+    required this.longitude,
+    required this.isFetching,
+    required this.onFetch,
+    required this.geofenceRadius,
+    required this.onRadiusChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasFix = latitude != null && longitude != null;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: hasFix
+            ? AppColors.success.withAlpha(15)
+            : AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: hasFix ? AppColors.success.withAlpha(80) : AppColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                hasFix ? Icons.gps_fixed_rounded : Icons.gps_not_fixed_rounded,
+                color: hasFix ? AppColors.success : AppColors.textHint,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: hasFix
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Lat: ${latitude!.toStringAsFixed(6)}',
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(color: AppColors.textPrimary),
+                          ),
+                          Text(
+                            'Lng: ${longitude!.toStringAsFixed(6)}',
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(color: AppColors.textPrimary),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        'No location captured yet',
+                        style: AppTextStyles.body
+                            .copyWith(color: AppColors.textHint),
+                      ),
+              ),
+              const SizedBox(width: 8),
+              isFetching
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : TextButton.icon(
+                      onPressed: onFetch,
+                      icon: const Icon(Icons.my_location_rounded, size: 16),
+                      label: Text(hasFix ? 'Refresh' : 'Get Location'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                      ),
+                    ),
+            ],
+          ),
+          if (hasFix) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Geofence Radius: ${geofenceRadius.round()} m',
+              style:
+                  AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+            ),
+            Slider(
+              value: geofenceRadius,
+              min: 50,
+              max: 1000,
+              divisions: 19,
+              label: '${geofenceRadius.round()} m',
+              onChanged: onRadiusChanged,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
