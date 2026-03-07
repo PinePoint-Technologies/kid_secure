@@ -83,25 +83,34 @@ final adminStatsProvider = Provider<AsyncValue<AdminStats>>((ref) {
   ));
 });
 
-// Creche teachers (filtered by creche teacherIds)
+// Creche teachers — derived reactively so it updates when teacherIds changes.
 final crecheTeachersProvider =
-    StreamProvider.family<List<UserModel>, String>((ref, crecheId) async* {
-  final creches = await ref
-      .watch(firestoreServiceProvider)
-      .watchAllCreches()
-      .first;
-  final creche = creches.firstWhere((c) => c.id == crecheId,
-      orElse: () => CrecheModel(
-            id: crecheId,
-            name: '',
-            address: '',
-            createdAt: DateTime.now(),
-          ));
-  yield* ref
-      .watch(firestoreServiceProvider)
-      .watchTeachers()
-      .map((teachers) =>
-          teachers.where((t) => creche.teacherIds.contains(t.uid)).toList());
+    Provider.family<AsyncValue<List<UserModel>>, String>((ref, crecheId) {
+  final crechesAsync = ref.watch(allCrechesProvider);
+  final teachersAsync = ref.watch(allTeachersProvider);
+
+  if (crechesAsync.isLoading || teachersAsync.isLoading) {
+    return const AsyncValue.loading();
+  }
+  if (crechesAsync.hasError) {
+    return AsyncValue.error(
+        crechesAsync.error!, crechesAsync.stackTrace ?? StackTrace.current);
+  }
+  if (teachersAsync.hasError) {
+    return AsyncValue.error(
+        teachersAsync.error!, teachersAsync.stackTrace ?? StackTrace.current);
+  }
+
+  final creche = crechesAsync.value!.cast<CrecheModel?>().firstWhere(
+        (c) => c?.id == crecheId,
+        orElse: () => null,
+      );
+  if (creche == null) return const AsyncValue.data([]);
+
+  final assigned = teachersAsync.value!
+      .where((t) => creche.teacherIds.contains(t.uid))
+      .toList();
+  return AsyncValue.data(assigned);
 });
 
 // ─── Creche Form Notifier ────────────────────────────────────────────────────
@@ -242,7 +251,7 @@ class AdminUserFormNotifier extends Notifier<AdminUserFormState> {
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await _service.createUser(
+      final user = await _service.createUser(
         email: email,
         password: password,
         displayName: displayName,
@@ -250,6 +259,14 @@ class AdminUserFormNotifier extends Notifier<AdminUserFormState> {
         phoneNumber: phoneNumber,
         crecheIds: crecheIds,
       );
+      // For teachers, also update each crèche's teacherIds so the assignment
+      // screen shows them as assigned (not just the user doc's crecheIds).
+      if (role == UserRole.teacher && crecheIds.isNotEmpty) {
+        final db = ref.read(firestoreServiceProvider);
+        for (final crecheId in crecheIds) {
+          await db.addTeacherToCreche(crecheId, user.uid);
+        }
+      }
       state = state.copyWith(isLoading: false, isSuccess: true);
     } catch (e) {
       state = state.copyWith(
