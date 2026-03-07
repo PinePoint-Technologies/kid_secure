@@ -38,6 +38,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
   double _geofenceRadius = 200;
   bool _fetchingLocation = false;
   bool _fetchingDetails = false;
+  bool _populated = false;
 
   bool get isEditing => widget.crecheId != null;
 
@@ -51,6 +52,24 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
     }
     _addressFocus.dispose();
     super.dispose();
+  }
+
+  // ── Populate form for edit ────────────────────────────────────────────────
+
+  void _populate(CrecheModel c) {
+    _nameCtrl.text = c.name;
+    _addressCtrl.text = c.address;
+    _cityCtrl.text = c.city ?? '';
+    _provinceCtrl.text = c.province ?? '';
+    _postalCtrl.text = c.postalCode ?? '';
+    _phoneCtrl.text = c.phoneNumber ?? '';
+    _emailCtrl.text = c.email ?? '';
+    _regCtrl.text = c.registrationNumber ?? '';
+    _capacity = c.capacity;
+    _latitude = c.latitude;
+    _longitude = c.longitude;
+    _geofenceRadius = c.geofenceRadiusMeters;
+    _populated = true;
   }
 
   // ── Places autocomplete selection ─────────────────────────────────────────
@@ -152,6 +171,21 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Populate controllers once when editing and data arrives
+    if (isEditing && !_populated) {
+      ref.watch(allCrechesProvider).whenData((creches) {
+        final creche = creches.cast<CrecheModel?>().firstWhere(
+              (c) => c?.id == widget.crecheId,
+              orElse: () => null,
+            );
+        if (creche != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_populated) setState(() => _populate(creche));
+          });
+        }
+      });
+    }
+
     final formState = ref.watch(crecheFormProvider);
 
     ref.listen(crecheFormProvider, (_, next) {
