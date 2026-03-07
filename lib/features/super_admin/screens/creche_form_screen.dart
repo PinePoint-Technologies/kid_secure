@@ -1,3 +1,8 @@
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,15 +34,27 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _regCtrl = TextEditingController();
+  final _brandColorCtrl = TextEditingController();
+  final _taglineCtrl = TextEditingController();
   final _addressFocus = FocusNode();
   final _placesService = PlacesService();
   int _capacity = 30;
 
+  // GPS
   double? _latitude;
   double? _longitude;
   double _geofenceRadius = 200;
   bool _fetchingLocation = false;
   bool _fetchingDetails = false;
+
+  // Branding images
+  File? _logoFile;
+  File? _bannerFile;
+  String? _logoUrl;
+  String? _bannerUrl;
+  bool _uploadingLogo = false;
+  bool _uploadingBanner = false;
+
   bool _populated = false;
 
   bool get isEditing => widget.crecheId != null;
@@ -47,6 +64,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
     for (final c in [
       _nameCtrl, _addressCtrl, _cityCtrl, _provinceCtrl,
       _postalCtrl, _phoneCtrl, _emailCtrl, _regCtrl,
+      _brandColorCtrl, _taglineCtrl,
     ]) {
       c.dispose();
     }
@@ -54,7 +72,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
     super.dispose();
   }
 
-  // ── Populate form for edit ────────────────────────────────────────────────
+  // ── Populate for edit ─────────────────────────────────────────────────────
 
   void _populate(CrecheModel c) {
     _nameCtrl.text = c.name;
@@ -69,10 +87,40 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
     _latitude = c.latitude;
     _longitude = c.longitude;
     _geofenceRadius = c.geofenceRadiusMeters;
+    _logoUrl = c.logoUrl;
+    _bannerUrl = c.bannerUrl;
+    _brandColorCtrl.text = c.branding?['primaryColor'] as String? ?? '';
+    _taglineCtrl.text = c.branding?['tagline'] as String? ?? '';
     _populated = true;
   }
 
-  // ── Places autocomplete selection ─────────────────────────────────────────
+  // ── Image upload ──────────────────────────────────────────────────────────
+
+  Future<String?> _uploadImage(File file, String storagePath) async {
+    final ref = FirebaseStorage.instance.ref(storagePath);
+    await ref.putFile(file);
+    return ref.getDownloadURL();
+  }
+
+  Future<void> _pickLogo() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (result == null || result.files.single.path == null) return;
+    setState(() {
+      _logoFile = File(result.files.single.path!);
+      _logoUrl = null; // will be set after upload
+    });
+  }
+
+  Future<void> _pickBanner() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (result == null || result.files.single.path == null) return;
+    setState(() {
+      _bannerFile = File(result.files.single.path!);
+      _bannerUrl = null;
+    });
+  }
+
+  // ── Places autocomplete ───────────────────────────────────────────────────
 
   Future<void> _onPlaceSelected(PlacePrediction prediction) async {
     setState(() => _fetchingDetails = true);
@@ -107,8 +155,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
           permission == LocationPermission.denied) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content:
-                Text('Location permission denied. Enable it in settings.'),
+            content: Text('Location permission denied. Enable it in settings.'),
             backgroundColor: AppColors.error,
           ));
         }
@@ -140,6 +187,45 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Upload new logo if picked
+    String? finalLogoUrl = _logoUrl;
+    if (_logoFile != null) {
+      setState(() => _uploadingLogo = true);
+      try {
+        final ts = DateTime.now().millisecondsSinceEpoch;
+        finalLogoUrl =
+            await _uploadImage(_logoFile!, 'creche_logos/${widget.crecheId ?? ts}.jpg');
+      } finally {
+        if (mounted) setState(() => _uploadingLogo = false);
+      }
+    }
+
+    // Upload new banner if picked
+    String? finalBannerUrl = _bannerUrl;
+    if (_bannerFile != null) {
+      setState(() => _uploadingBanner = true);
+      try {
+        final ts = DateTime.now().millisecondsSinceEpoch;
+        finalBannerUrl =
+            await _uploadImage(_bannerFile!, 'creche_banners/${widget.crecheId ?? ts}.jpg');
+      } finally {
+        if (mounted) setState(() => _uploadingBanner = false);
+      }
+    }
+
+    // Build branding map (only include non-empty values)
+    final Map<String, dynamic>? branding = () {
+      final m = <String, dynamic>{};
+      if (_brandColorCtrl.text.trim().isNotEmpty) {
+        m['primaryColor'] = _brandColorCtrl.text.trim();
+      }
+      if (_taglineCtrl.text.trim().isNotEmpty) {
+        m['tagline'] = _taglineCtrl.text.trim();
+      }
+      return m.isEmpty ? null : m;
+    }();
+
     final creche = CrecheModel(
       id: widget.crecheId ?? '',
       name: _nameCtrl.text.trim(),
@@ -158,6 +244,9 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
       latitude: _latitude,
       longitude: _longitude,
       geofenceRadiusMeters: _geofenceRadius,
+      logoUrl: finalLogoUrl,
+      bannerUrl: finalBannerUrl,
+      branding: branding,
       createdAt: DateTime.now(),
     );
 
@@ -171,7 +260,6 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Populate controllers once when editing and data arrives
     if (isEditing && !_populated) {
       ref.watch(allCrechesProvider).whenData((creches) {
         final creche = creches.cast<CrecheModel?>().firstWhere(
@@ -187,6 +275,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
     }
 
     final formState = ref.watch(crecheFormProvider);
+    final isSaving = formState.isLoading || _uploadingLogo || _uploadingBanner;
 
     ref.listen(crecheFormProvider, (_, next) {
       if (next.isSuccess) {
@@ -236,6 +325,68 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
               ).animate(delay: 50.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 24),
 
+              // ── Branding ─────────────────────────────────────────────────
+              _sectionHeader('Branding'),
+              const SizedBox(height: 4),
+              Text(
+                'Optional — logo, banner and brand colour for this crèche.',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+
+              // Logo + Banner row
+              Row(
+                children: [
+                  Expanded(
+                    child: _ImagePicker(
+                      label: 'Logo',
+                      icon: Icons.image_rounded,
+                      file: _logoFile,
+                      url: _logoUrl,
+                      uploading: _uploadingLogo,
+                      onPick: _pickLogo,
+                      onClear: () => setState(() {
+                        _logoFile = null;
+                        _logoUrl = null;
+                      }),
+                      aspectRatio: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: _ImagePicker(
+                      label: 'Banner',
+                      icon: Icons.panorama_rounded,
+                      file: _bannerFile,
+                      url: _bannerUrl,
+                      uploading: _uploadingBanner,
+                      onPick: _pickBanner,
+                      onClear: () => setState(() {
+                        _bannerFile = null;
+                        _bannerUrl = null;
+                      }),
+                      aspectRatio: 16 / 9,
+                    ),
+                  ),
+                ],
+              ).animate(delay: 60.ms).fadeIn(duration: 400.ms),
+              const SizedBox(height: 14),
+
+              _field(
+                controller: _brandColorCtrl,
+                label: 'Brand Colour (hex, e.g. #1B5286)',
+                icon: Icons.palette_outlined,
+              ).animate(delay: 70.ms).fadeIn(duration: 400.ms),
+              const SizedBox(height: 14),
+              _field(
+                controller: _taglineCtrl,
+                label: 'Tagline (optional)',
+                icon: Icons.format_quote_rounded,
+              ).animate(delay: 80.ms).fadeIn(duration: 400.ms),
+              const SizedBox(height: 24),
+
               // ── Location ─────────────────────────────────────────────────
               _sectionHeader('Location'),
               const SizedBox(height: 4),
@@ -246,7 +397,6 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Address autocomplete
               RawAutocomplete<PlacePrediction>(
                 textEditingController: _addressCtrl,
                 focusNode: _addressFocus,
@@ -325,7 +475,6 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
                 ),
               ).animate(delay: 100.ms).fadeIn(duration: 400.ms),
 
-              // Google attribution (required by ToS)
               Align(
                 alignment: Alignment.centerRight,
                 child: Padding(
@@ -424,7 +573,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
               GradientButton(
                 label: isEditing ? 'Update Creche' : 'Create Creche',
                 onPressed: _save,
-                isLoading: formState.isLoading,
+                isLoading: isSaving,
                 gradient: AppColors.superAdminGradient,
                 icon: Icons.check_rounded,
               ).animate(delay: 300.ms).fadeIn(duration: 400.ms),
@@ -463,6 +612,108 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
       );
 }
 
+// ─── Image picker tile ────────────────────────────────────────────────────────
+
+class _ImagePicker extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final File? file;
+  final String? url;
+  final bool uploading;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+  final double aspectRatio;
+
+  const _ImagePicker({
+    required this.label,
+    required this.icon,
+    required this.file,
+    required this.url,
+    required this.uploading,
+    required this.onPick,
+    required this.onClear,
+    required this.aspectRatio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = file != null || url != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.label.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 6),
+        AspectRatio(
+          aspectRatio: aspectRatio,
+          child: GestureDetector(
+            onTap: onPick,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: uploading
+                  ? const Center(child: CircularProgressIndicator())
+                  : hasImage
+                      ? Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            file != null
+                                ? Image.file(file!, fit: BoxFit.cover)
+                                : CachedNetworkImage(
+                                    imageUrl: url!,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, __) => const Center(
+                                        child: CircularProgressIndicator()),
+                                    errorWidget: (_, __, ___) => const Icon(
+                                        Icons.broken_image_rounded,
+                                        color: AppColors.textHint),
+                                  ),
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: GestureDetector(
+                                onTap: onClear,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Icon(Icons.close_rounded,
+                                      color: Colors.white, size: 16),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(icon,
+                                size: 32, color: AppColors.textHint),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Tap to upload',
+                              style: AppTextStyles.caption
+                                  .copyWith(color: AppColors.textHint),
+                            ),
+                          ],
+                        ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ─── GPS card ─────────────────────────────────────────────────────────────────
 
 class _GpsCard extends StatelessWidget {
@@ -494,8 +745,7 @@ class _GpsCard extends StatelessWidget {
             : AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color:
-              hasFix ? AppColors.success.withAlpha(80) : AppColors.border,
+          color: hasFix ? AppColors.success.withAlpha(80) : AppColors.border,
         ),
       ),
       child: Column(
@@ -544,7 +794,7 @@ class _GpsCard extends StatelessWidget {
                   : TextButton.icon(
                       onPressed: onFetch,
                       icon: const Icon(Icons.my_location_rounded, size: 16),
-                      label: Text(hasFix ? 'Use GPS' : 'Use GPS'),
+                      label: const Text('Use GPS'),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.primary,
                       ),
