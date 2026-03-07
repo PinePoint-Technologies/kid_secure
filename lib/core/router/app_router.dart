@@ -141,7 +141,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.uri.toString().startsWith('/register') ||
           state.uri.toString().startsWith('/setup') ||
           state.uri.toString().startsWith('/invite') ||
-          state.uri.toString().startsWith('/onboarding') ||
           state.uri.toString() == AppRoutes.splash;
 
       if (!isLoggedIn && !isLoginRoute) return AppRoutes.login;

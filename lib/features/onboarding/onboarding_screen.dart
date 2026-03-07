@@ -1,59 +1,150 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../auth/providers/auth_provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../shared/models/user_model.dart';
 
-const kOnboardingDoneKey = 'onboarding_done';
+/// SharedPreferences key for a given role.
+String onboardingKeyForRole(UserRole role) => 'onboarding_done_${role.name}';
 
-class OnboardingScreen extends StatefulWidget {
+// ─── Slide data ───────────────────────────────────────────────────────────────
+
+class _Slide {
+  final IconData icon;
+  final String title;
+  final String body;
+
+  const _Slide({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+}
+
+const _superAdminSlides = [
+  _Slide(
+    icon: Icons.dashboard_rounded,
+    title: 'Full System Control',
+    body: 'Oversee every crèche, user, and activity from one powerful dashboard.',
+  ),
+  _Slide(
+    icon: Icons.school_rounded,
+    title: 'Manage Crèches',
+    body: 'Create crèches, assign teachers, and keep your network organised.',
+  ),
+  _Slide(
+    icon: Icons.group_add_rounded,
+    title: 'Users & Kids',
+    body: 'Enrol kids, add parents and teachers, and link families to children.',
+  ),
+  _Slide(
+    icon: Icons.bar_chart_rounded,
+    title: 'Reports & Insights',
+    body: 'Track enrollment trends and sick leave across every school at a glance.',
+  ),
+];
+
+const _teacherSlides = [
+  _Slide(
+    icon: Icons.home_rounded,
+    title: 'Your Classroom Hub',
+    body: 'Manage all kids in your crèche from a single, easy-to-use dashboard.',
+  ),
+  _Slide(
+    icon: Icons.fact_check_rounded,
+    title: 'Track Attendance',
+    body: 'Mark sign-in, sign-out, and absent status for each child every day.',
+  ),
+  _Slide(
+    icon: Icons.qr_code_scanner_rounded,
+    title: 'Guardian Check-In',
+    body: 'Scan guardian QR codes and verify PINs to ensure safe, authorised pick-ups.',
+  ),
+  _Slide(
+    icon: Icons.family_restroom_rounded,
+    title: 'Kids & Parents',
+    body: 'View kid profiles, log sick leave, and link parents to children with ease.',
+  ),
+];
+
+const _parentSlides = [
+  _Slide(
+    icon: Icons.child_care_rounded,
+    title: 'Stay Close to Your Child',
+    body: 'Get real-time updates on your child\'s day at the crèche.',
+  ),
+  _Slide(
+    icon: Icons.login_rounded,
+    title: 'Sign In & Out',
+    body: 'See exactly when your child arrives and leaves — always in the loop.',
+  ),
+  _Slide(
+    icon: Icons.people_alt_rounded,
+    title: 'Trusted Guardians',
+    body: 'Add trusted guardians who are authorised to pick up your child.',
+  ),
+  _Slide(
+    icon: Icons.medical_services_rounded,
+    title: 'Sick Leave',
+    body: 'Log your child\'s sick days and keep the crèche informed instantly.',
+  ),
+];
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _controller = PageController();
   int _page = 0;
 
-  static const _slides = [
-    _Slide(
-      icon: Icons.shield_rounded,
-      title: 'Welcome to KidSecure',
-      body:
-          'The smart way to manage your crèche — safe, simple, and connected.',
-      iconColor: AppColors.primary,
-    ),
-    _Slide(
-      icon: Icons.qr_code_scanner_rounded,
-      title: 'Secure Guardian Check-In',
-      body:
-          'Guardians verify identity with QR codes and PINs before picking up a child.',
-      iconColor: AppColors.accent,
-    ),
-    _Slide(
-      icon: Icons.notifications_active_rounded,
-      title: 'Stay in the Loop',
-      body:
-          'Get instant notifications about your child\'s attendance, sick days, and activities.',
-      iconColor: AppColors.primaryLight,
-    ),
-    _Slide(
-      icon: Icons.people_alt_rounded,
-      title: 'Built for Your School',
-      body:
-          'Tailored dashboards for admins, teachers, and parents — everyone sees exactly what they need.',
-      iconColor: AppColors.primary,
-    ),
-  ];
+  UserRole? get _role => ref.read(currentUserProvider).valueOrNull?.role;
+
+  List<_Slide> get _slides => switch (_role) {
+        UserRole.superAdmin => _superAdminSlides,
+        UserRole.teacher => _teacherSlides,
+        UserRole.parent => _parentSlides,
+        null => _superAdminSlides,
+      };
+
+  String get _dashboard => switch (_role) {
+        UserRole.superAdmin => AppRoutes.superAdmin,
+        UserRole.teacher => AppRoutes.teacher,
+        UserRole.parent => AppRoutes.parent,
+        null => AppRoutes.login,
+      };
+
+  LinearGradient get _gradient => switch (_role) {
+        UserRole.superAdmin => AppColors.superAdminGradient,
+        UserRole.teacher => AppColors.teacherGradient,
+        UserRole.parent => AppColors.parentGradient,
+        null => AppColors.splashGradient,
+      };
+
+  Color get _accentColor => switch (_role) {
+        UserRole.superAdmin => AppColors.superAdmin,
+        UserRole.teacher => AppColors.primaryLight,
+        UserRole.parent => AppColors.accent,
+        null => AppColors.primaryLight,
+      };
 
   Future<void> _finish() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(kOnboardingDoneKey, true);
-    if (mounted) context.go(AppRoutes.login);
+    final role = _role;
+    if (role != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(onboardingKeyForRole(role), true);
+    }
+    if (mounted) context.go(_dashboard);
   }
 
   void _next() {
@@ -75,11 +166,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLast = _page == _slides.length - 1;
+    final slides = _slides;
+    final isLast = _page == slides.length - 1;
+    final accent = _accentColor;
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.splashGradient),
+        decoration: BoxDecoration(gradient: _gradient),
         child: SafeArea(
           child: Column(
             children: [
@@ -105,15 +198,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: PageView.builder(
                   controller: _controller,
                   onPageChanged: (i) => setState(() => _page = i),
-                  itemCount: _slides.length,
-                  itemBuilder: (_, i) => _SlidePage(slide: _slides[i]),
+                  itemCount: slides.length,
+                  itemBuilder: (_, i) =>
+                      _SlidePage(slide: slides[i], iconColor: accent),
                 ),
               ),
 
               // Page dots
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_slides.length, (i) {
+                children: List.generate(slides.length, (i) {
                   final active = i == _page;
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
@@ -121,9 +215,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: active ? 24 : 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: active
-                          ? Colors.white
-                          : Colors.white.withAlpha(80),
+                      color:
+                          active ? Colors.white : Colors.white.withAlpha(80),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   );
@@ -145,7 +238,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       onPressed: _next,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: AppColors.primary,
+                        foregroundColor: accent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -153,9 +246,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       child: Text(
                         isLast ? 'Get Started' : 'Next',
-                        style: AppTextStyles.button.copyWith(
-                          color: AppColors.primary,
-                        ),
+                        style: AppTextStyles.button.copyWith(color: accent),
                       ),
                     ),
                   ),
@@ -171,28 +262,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-// ─── Slide data ──────────────────────────────────────────────────────────────
-
-class _Slide {
-  final IconData icon;
-  final String title;
-  final String body;
-  final Color iconColor;
-
-  const _Slide({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.iconColor,
-  });
-}
-
-// ─── Single slide page ────────────────────────────────────────────────────────
+// ─── Single slide ─────────────────────────────────────────────────────────────
 
 class _SlidePage extends StatelessWidget {
   final _Slide slide;
+  final Color iconColor;
 
-  const _SlidePage({required this.slide});
+  const _SlidePage({required this.slide, required this.iconColor});
 
   @override
   Widget build(BuildContext context) {
@@ -215,11 +291,7 @@ class _SlidePage extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
-              slide.icon,
-              size: 80,
-              color: slide.iconColor,
-            ),
+            child: Icon(slide.icon, size: 80, color: iconColor),
           )
               .animate()
               .scale(duration: 600.ms, curve: Curves.elasticOut)
