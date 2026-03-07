@@ -31,36 +31,39 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     await Future.delayed(const Duration(milliseconds: 2200));
     if (!mounted) return;
 
-    final authState = ref.read(authStateProvider);
-    authState.when(
-      data: (user) async {
-        if (user == null) {
-          context.go(AppRoutes.login);
-          return;
-        }
-        final profile = ref.read(currentUserProvider).valueOrNull;
-        if (profile == null) {
-          context.go(AppRoutes.login);
-          return;
-        }
-        // Show role-specific onboarding on first login
-        final prefs = await SharedPreferences.getInstance();
-        if (!mounted) return;
-        final onboardingDone =
-            prefs.getBool(onboardingKeyForRole(profile.role)) ?? false;
-        if (!onboardingDone) {
-          context.go(AppRoutes.onboarding);
-          return;
-        }
-        context.go(switch (profile.role) {
-          UserRole.superAdmin => AppRoutes.superAdmin,
-          UserRole.teacher => AppRoutes.teacher,
-          UserRole.parent => AppRoutes.parent,
-        });
-      },
-      loading: () => context.go(AppRoutes.login),
-      error: (_, __) => context.go(AppRoutes.login),
-    );
+    // Await proper resolution — never read a loading snapshot
+    final user = await ref.read(authStateProvider.future);
+    if (!mounted) return;
+
+    if (user == null) {
+      context.go(AppRoutes.login);
+      return;
+    }
+
+    final profile = await ref.read(currentUserProvider.future);
+    if (!mounted) return;
+
+    if (profile == null) {
+      context.go(AppRoutes.login);
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    final onboardingDone =
+        prefs.getBool(onboardingKeyForRole(profile.role)) ?? false;
+
+    if (!onboardingDone) {
+      context.go(AppRoutes.onboarding);
+      return;
+    }
+
+    context.go(switch (profile.role) {
+      UserRole.superAdmin => AppRoutes.superAdmin,
+      UserRole.teacher => AppRoutes.teacher,
+      UserRole.parent => AppRoutes.parent,
+    });
   }
 
   @override
