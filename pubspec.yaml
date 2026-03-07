@@ -60,6 +60,9 @@ dependencies:
   # Cryptography
   crypto: ^3.0.0
 
+  # HTTP
+  http: ^1.2.2
+
   # Utilities
   intl: ^0.20.2
   intl_phone_field: ^3.2.0

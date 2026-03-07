@@ -7,6 +7,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/models/creche_model.dart';
+import '../../../shared/services/places_service.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../providers/super_admin_provider.dart';
 
@@ -28,12 +29,15 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _regCtrl = TextEditingController();
+  final _addressFocus = FocusNode();
+  final _placesService = PlacesService();
   int _capacity = 30;
 
   double? _latitude;
   double? _longitude;
   double _geofenceRadius = 200;
   bool _fetchingLocation = false;
+  bool _fetchingDetails = false;
 
   bool get isEditing => widget.crecheId != null;
 
@@ -45,8 +49,33 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
     ]) {
       c.dispose();
     }
+    _addressFocus.dispose();
     super.dispose();
   }
+
+  // ── Places autocomplete selection ─────────────────────────────────────────
+
+  Future<void> _onPlaceSelected(PlacePrediction prediction) async {
+    setState(() => _fetchingDetails = true);
+    final details = await _placesService.getDetails(prediction.placeId);
+    if (!mounted) return;
+    if (details != null) {
+      _addressCtrl.text = details.streetAddress ?? details.formattedAddress;
+      if (details.city != null) _cityCtrl.text = details.city!;
+      if (details.province != null) _provinceCtrl.text = details.province!;
+      if (details.postalCode != null) _postalCtrl.text = details.postalCode!;
+      setState(() {
+        _latitude = details.latitude;
+        _longitude = details.longitude;
+        _fetchingDetails = false;
+      });
+    } else {
+      setState(() => _fetchingDetails = false);
+    }
+    _addressFocus.unfocus();
+  }
+
+  // ── Device GPS ────────────────────────────────────────────────────────────
 
   Future<void> _fetchLocation() async {
     setState(() => _fetchingLocation = true);
@@ -58,22 +87,18 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
       if (permission == LocationPermission.deniedForever ||
           permission == LocationPermission.denied) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location permission denied. Enable it in settings.'),
-              backgroundColor: AppColors.error,
-            ),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content:
+                Text('Location permission denied. Enable it in settings.'),
+            backgroundColor: AppColors.error,
+          ));
         }
         return;
       }
-
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
       );
-
       if (mounted) {
         setState(() {
           _latitude = pos.latitude;
@@ -82,17 +107,17 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not get location: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Could not get location: $e'),
+          backgroundColor: AppColors.error,
+        ));
       }
     } finally {
       if (mounted) setState(() => _fetchingLocation = false);
     }
   }
+
+  // ── Save ──────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
@@ -123,28 +148,25 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
         );
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final formState = ref.watch(crecheFormProvider);
 
     ref.listen(crecheFormProvider, (_, next) {
       if (next.isSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text(isEditing ? 'Creche updated!' : 'Creche created!'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isEditing ? 'Creche updated!' : 'Creche created!'),
+          backgroundColor: AppColors.success,
+        ));
         context.go(AppRoutes.superAdminCreches);
       }
       if (next.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error!),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(next.error!),
+          backgroundColor: AppColors.error,
+        ));
       }
     });
 
@@ -163,6 +185,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Basic info ───────────────────────────────────────────────
               _sectionHeader('Basic Information'),
               const SizedBox(height: 12),
               _field(
@@ -179,15 +202,109 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
               ).animate(delay: 50.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 24),
 
+              // ── Location ─────────────────────────────────────────────────
               _sectionHeader('Location'),
+              const SizedBox(height: 4),
+              Text(
+                'Search an address to auto-fill fields and capture coordinates.',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.textSecondary),
+              ),
               const SizedBox(height: 12),
-              _field(
-                controller: _addressCtrl,
-                label: 'Street Address',
-                icon: Icons.location_on_outlined,
-                required: true,
+
+              // Address autocomplete
+              RawAutocomplete<PlacePrediction>(
+                textEditingController: _addressCtrl,
+                focusNode: _addressFocus,
+                displayStringForOption: (p) => p.description,
+                optionsBuilder: (value) async {
+                  if (value.text.length < 3) return const [];
+                  return _placesService.autocomplete(value.text);
+                },
+                onSelected: _onPlaceSelected,
+                fieldViewBuilder: (_, controller, focusNode, __) =>
+                    TextFormField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  decoration: InputDecoration(
+                    labelText: 'Search Address',
+                    prefixIcon: _fetchingDetails
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : const Icon(Icons.search_rounded),
+                    suffixIcon: _addressCtrl.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded),
+                            onPressed: () {
+                              _addressCtrl.clear();
+                              setState(() {
+                                _latitude = null;
+                                _longitude = null;
+                              });
+                            },
+                          )
+                        : null,
+                  ),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Address is required'
+                      : null,
+                ),
+                optionsViewBuilder: (_, onSelected, options) => Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 6,
+                    borderRadius: BorderRadius.circular(14),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        shrinkWrap: true,
+                        itemCount: options.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1, indent: 48),
+                        itemBuilder: (_, i) {
+                          final opt = options.elementAt(i);
+                          return ListTile(
+                            leading: const Icon(
+                              Icons.location_on_outlined,
+                              color: AppColors.primary,
+                            ),
+                            title: Text(
+                              opt.description,
+                              style: AppTextStyles.bodyMedium,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onTap: () => onSelected(opt),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
               ).animate(delay: 100.ms).fadeIn(duration: 400.ms),
+
+              // Google attribution (required by ToS)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Powered by Google',
+                    style: AppTextStyles.caption
+                        .copyWith(color: AppColors.textHint),
+                  ),
+                ),
+              ),
               const SizedBox(height: 14),
+
               Row(
                 children: [
                   Expanded(
@@ -216,7 +333,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
               ).animate(delay: 160.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 20),
 
-              // ── GPS ─────────────────────────────────────────────────────
+              // ── GPS ──────────────────────────────────────────────────────
               _sectionHeader('GPS Coordinates'),
               const SizedBox(height: 12),
               _GpsCard(
@@ -225,11 +342,11 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
                 isFetching: _fetchingLocation,
                 onFetch: _fetchLocation,
                 geofenceRadius: _geofenceRadius,
-                onRadiusChanged: (v) =>
-                    setState(() => _geofenceRadius = v),
+                onRadiusChanged: (v) => setState(() => _geofenceRadius = v),
               ).animate(delay: 180.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 24),
 
+              // ── Contact ──────────────────────────────────────────────────
               _sectionHeader('Contact'),
               const SizedBox(height: 12),
               _field(
@@ -247,6 +364,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
               ).animate(delay: 220.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 24),
 
+              // ── Capacity ─────────────────────────────────────────────────
               _sectionHeader('Capacity'),
               const SizedBox(height: 12),
               Row(
@@ -261,14 +379,14 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
                       max: 200,
                       divisions: 38,
                       label: '$_capacity kids',
-                      onChanged: (v) =>
-                          setState(() => _capacity = v.round()),
+                      onChanged: (v) => setState(() => _capacity = v.round()),
                     ),
                   ),
                   Text('$_capacity', style: AppTextStyles.titleMedium),
                 ],
               ).animate(delay: 260.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 36),
+
               GradientButton(
                 label: isEditing ? 'Update Creche' : 'Create Creche',
                 onPressed: _save,
@@ -304,13 +422,14 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
           prefixIcon: Icon(icon),
         ),
         validator: required
-            ? (v) =>
-                (v == null || v.trim().isEmpty) ? '$label is required' : null
+            ? (v) => (v == null || v.trim().isEmpty)
+                ? '$label is required'
+                : null
             : null,
       );
 }
 
-// ─── GPS card widget ──────────────────────────────────────────────────────────
+// ─── GPS card ─────────────────────────────────────────────────────────────────
 
 class _GpsCard extends StatelessWidget {
   final double? latitude;
@@ -341,7 +460,8 @@ class _GpsCard extends StatelessWidget {
             : AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: hasFix ? AppColors.success.withAlpha(80) : AppColors.border,
+          color:
+              hasFix ? AppColors.success.withAlpha(80) : AppColors.border,
         ),
       ),
       child: Column(
@@ -350,7 +470,9 @@ class _GpsCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                hasFix ? Icons.gps_fixed_rounded : Icons.gps_not_fixed_rounded,
+                hasFix
+                    ? Icons.gps_fixed_rounded
+                    : Icons.gps_not_fixed_rounded,
                 color: hasFix ? AppColors.success : AppColors.textHint,
                 size: 20,
               ),
@@ -373,8 +495,8 @@ class _GpsCard extends StatelessWidget {
                         ],
                       )
                     : Text(
-                        'No location captured yet',
-                        style: AppTextStyles.body
+                        'No coordinates yet — search an address above\nor use device GPS',
+                        style: AppTextStyles.bodySmall
                             .copyWith(color: AppColors.textHint),
                       ),
               ),
@@ -388,7 +510,7 @@ class _GpsCard extends StatelessWidget {
                   : TextButton.icon(
                       onPressed: onFetch,
                       icon: const Icon(Icons.my_location_rounded, size: 16),
-                      label: Text(hasFix ? 'Refresh' : 'Get Location'),
+                      label: Text(hasFix ? 'Use GPS' : 'Use GPS'),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.primary,
                       ),
@@ -399,8 +521,8 @@ class _GpsCard extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'Geofence Radius: ${geofenceRadius.round()} m',
-              style:
-                  AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
             ),
             Slider(
               value: geofenceRadius,
