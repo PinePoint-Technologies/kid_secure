@@ -34,6 +34,7 @@ import '../../features/parent/guardians/add_guardian_screen.dart';
 import '../../features/parent/sick_leave/sick_leave_screen.dart';
 import '../../features/parent/sick_leave/log_sick_leave_screen.dart';
 import '../../features/auth/screens/invite_register_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/settings/screens/edit_profile_screen.dart';
 import '../../features/settings/screens/change_password_screen.dart';
@@ -50,6 +51,7 @@ final _rootNavKey = GlobalKey<NavigatorState>();
 
 abstract final class AppRoutes {
   static const splash = '/';
+  static const onboarding = '/onboarding';
   static const login = '/login';
   static const register = '/register';
   static const setup = '/setup'; //super-user
@@ -139,6 +141,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.uri.toString().startsWith('/register') ||
           state.uri.toString().startsWith('/setup') ||
           state.uri.toString().startsWith('/invite') ||
+          state.uri.toString().startsWith('/onboarding') ||
           state.uri.toString() == AppRoutes.splash;
 
       if (!isLoggedIn && !isLoginRoute) return AppRoutes.login;
@@ -160,6 +163,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.splash,
         builder: (_, __) => const SplashScreen(),
+      ),
+
+      // Onboarding
+      GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (_, __) => const OnboardingScreen(),
       ),
 
       // Auth

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/providers/firebase_providers.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../core/router/app_router.dart';
@@ -9,6 +10,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../shared/models/user_model.dart';
 import '../auth/providers/auth_provider.dart';
+import '../onboarding/onboarding_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -28,6 +30,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _navigate() async {
     await Future.delayed(const Duration(milliseconds: 2200));
     if (!mounted) return;
+
+    // Show onboarding on first launch
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingDone = prefs.getBool(kOnboardingDoneKey) ?? false;
+    if (!mounted) return;
+    if (!onboardingDone) {
+      context.go(AppRoutes.onboarding);
+      return;
+    }
+
     final authState = ref.read(authStateProvider);
     authState.when(
       data: (user) async {
