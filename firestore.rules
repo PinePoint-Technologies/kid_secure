@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Role value matches AppConstants.roleSuperAdmin = 'super_admin'.
+    // For collection queries (list), isSuperAdmin() is evaluated ONCE per
+    // request (result is cached), so get() does not cause per-document
+    // re-evaluation.
+    function isSuperAdmin() {
+      return isAuth() && getUserData().role == 'super_admin';
+    }
+
+    function isTeacher() {
+      return isAuth() && getUserData().role == 'teacher';
+    }
+
+    function isParent() {
+      return isAuth() && getUserData().role == 'parent';
+    }
+
+    function isBootstrapped() {
+      return exists(/databases/$(database)/documents/config/bootstrapped);
+    }
+
+    // ── Config (bootstrap flag) ───────────────────────────────────────────
+    match /config/bootstrapped {
+      allow read: if true;
+      allow create: if isAuth() && !isBootstrapped();
+    }
+
+    // ── Users ──────────────────────────────────────────────────────────────
+    // allow get  → single-document read (own doc or super_admin)
+    // allow list → collection query — only super_admin; isSelf(uid) is NOT
+    //              included here because uid is a path wildcard that varies
+    //              per-document, which would make the rule document-specific
+    //              and cause Firestore to reject collection queries.
+    match /users/{uid} {
+      allow get:    if isSelf(uid) || isSuperAdmin() || isTeacher();
+      allow list:   if isSuperAdmin() || isTeacher();
+      allow create: if isSuperAdmin()
+        || (isTeacher() && request.resource.data.role == 'parent')
+        || (isSelf(uid) && (
+          request.resource.data.role != 'super_admin' || !isBootstrapped()
+        ));
+      allow update: if isSelf(uid) || isSuperAdmin() || isTeacher();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── Creches ────────────────────────────────────────────────────────────
+    match /creches/{crecheId} {
+      allow read:  if isAuth();
+      allow write: if isSuperAdmin();
+    }
+
+    // ── Children ──────────────────────────────────────────────────────────
+    match /children/{childId} {
+      allow read:   if isAuth();
+      allow create: if isAuth() && (isTeacher() || isSuperAdmin());
+      allow update: if isAuth() && (isTeacher() || isSuperAdmin() || isParent());
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── Guardians ─────────────────────────────────────────────────────────
+    match /guardians/{guardianId} {
+      allow read:  if isAuth();
+      allow write: if isAuth() && (isParent() || isSuperAdmin());
+    }
+
+    // ── Attendance ────────────────────────────────────────────────────────
+    match /attendance/{recordId} {
+      allow read:   if isAuth();
+      allow create: if isAuth() && (isTeacher() || isParent() || isSuperAdmin());
+      allow update: if isAuth() && (isTeacher() || isParent() || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── Sick Leave ────────────────────────────────────────────────────────
+    // Collection name matches AppConstants.colSickLeave = 'sick_leave'
+    match /sick_leave/{leaveId} {
+      allow read:   if isAuth();
+      allow create: if isAuth() && (isParent() || isSuperAdmin());
+      allow update: if isAuth() && (isTeacher() || isParent() || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── Invites ───────────────────────────────────────────────────────────────
+    // All writes happen via Cloud Functions (Admin SDK) — no client writes.
+    // Super admins can read all; teachers can read invites they created.
+    match /invites/{tokenId} {
+      allow read: if isSuperAdmin()
+        || (isTeacher() && resource.data.createdBy == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ── Audit Logs ────────────────────────────────────────────────────────────
+    // Written exclusively by Cloud Functions. Super admins can read.
+    match /audit_logs/{logId} {
+      allow read:  if isSuperAdmin();
+      allow write: if false;
+    }
+  }
+}

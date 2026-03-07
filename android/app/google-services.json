@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "697210776189",
+    "firebase_url": "https://heavy-6c072.firebaseio.com",
+    "project_id": "heavy-6c072",
+    "storage_bucket": "heavy-6c072.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:697210776189:android:17840864df2167e44b5f14",
+        "android_client_info": {
+          "package_name": "com.example.swiftlend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCumxP23V-O118DLsXuWd4DUYYwZCsL3ms"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:697210776189:android:aff1e338e3d769184b5f14",
+        "android_client_info": {
+          "package_name": "com.kidsecure.kid_secure"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCumxP23V-O118DLsXuWd4DUYYwZCsL3ms"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

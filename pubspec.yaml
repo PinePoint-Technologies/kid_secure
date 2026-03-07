@@ -1,0 +1,121 @@
+name: kid_secure
+description: KidSecure — creche school management with GPS tracking, guardian verification, and role-based access.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Firebase
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.5.2
+  cloud_firestore: ^5.6.5
+  firebase_storage: ^12.4.4
+  firebase_messaging: ^15.2.4
+
+  # Navigation
+  go_router: ^14.6.3
+
+  # Storage / prefs
+  shared_preferences: ^2.3.3
+  flutter_secure_storage: ^9.2.4
+
+  # Location / maps
+  geolocator: ^13.0.2
+  google_maps_flutter: ^2.10.0
+  google_maps_flutter_android: ^2.14.14
+  google_maps_flutter_platform_interface: ^2.7.0
+
+  # QR code
+  mobile_scanner: ^7.0.1
+  qr_flutter: ^4.1.0
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # UI / Charts
+  fl_chart: ^0.70.2
+  flutter_svg: ^2.0.10+1
+  lottie: ^3.3.1
+  cached_network_image: ^3.4.1
+  image_picker: ^1.1.2
+  flutter_animate: ^4.5.0
+  badges: ^3.1.2
+  table_calendar: ^3.1.2
+  pinput: ^5.0.0
+  shimmer: ^3.0.0
+
+  # Invite / deep linking
+  app_links: ^6.3.3
+  cloud_functions: ^5.1.4
+
+  # Cryptography
+  crypto: ^3.0.0
+
+  # Utilities
+  intl: ^0.20.2
+  intl_phone_field: ^3.2.0
+  uuid: ^4.5.1
+  equatable: ^2.0.7
+  path_provider: ^2.1.5
+  file_picker: ^8.1.7
+  url_launcher: ^6.3.1
+  package_info_plus: ^8.1.3
+  connectivity_plus: ^6.1.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  riverpod_generator: ^2.6.5
+  build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+
+# ─── App Icon ────────────────────────────────────────────────────────────────
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo.png"
+  min_sdk_android: 21
+  # Adaptive icon (Android 8+): your logo centred on the brand navy
+  adaptive_icon_background: "#1B5286"
+  adaptive_icon_foreground: "assets/images/logo.png"
+  # Rounded + web variants
+  web:
+    generate: true
+    image_path: "assets/images/logo.png"
+    background_color: "#1B5286"
+    theme_color: "#1B5286"
+  windows:
+    generate: true
+    image_path: "assets/images/logo.png"
+
+# ─── Native Splash ───────────────────────────────────────────────────────────
+flutter_native_splash:
+  # Deep navy — matches the dark end of splashGradient
+  color: "#0D2D4A"
+  image: assets/images/logo.png
+  # Keep the same look in dark mode
+  color_dark: "#0D2D4A"
+  image_dark: assets/images/logo.png
+  # Android 12+ splash icon
+  android_12:
+    image: assets/images/logo.png
+    color: "#0D2D4A"
+    icon_background_color: "#1B5286"
+  fullscreen: false

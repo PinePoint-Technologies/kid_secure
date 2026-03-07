@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter doctor:*)",
+      "Bash(flutter emulators:*)",
+      "Bash(flutter devices:*)",
+      "Bash(flutter run:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(ls:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter pub:*)",
+      "Bash(xargs grep:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(firebase use:*)",
+      "Bash(firebase functions:secrets:set:*)",
+      "Bash(node:*)",
+      "Bash(firebase functions:artifacts:setpolicy:*)",
+      "Bash(adb:*)",
+      "Bash(flutter build:*)"
+    ]
+  }
+}
