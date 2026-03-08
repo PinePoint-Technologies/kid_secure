@@ -143,7 +143,8 @@ class CrecheFormNotifier extends Notifier<CrecheFormState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       if (existingId != null) {
-        await _service.updateCreche(existingId, creche.toFirestore());
+        final data = creche.toFirestore()..remove('teacherIds');
+        await _service.updateCreche(existingId, data);
       } else {
         await _service.createCreche(creche);
       }

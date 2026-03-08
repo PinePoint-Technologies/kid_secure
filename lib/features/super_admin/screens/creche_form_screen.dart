@@ -97,7 +97,7 @@ class _CrecheFormScreenState extends ConsumerState<CrecheFormScreen> {
   // ── Image upload ──────────────────────────────────────────────────────────
 
   Future<String?> _uploadImage(File file, String storagePath) async {
-    final ref = FirebaseStorage.instance.ref(storagePath);
+    final ref = FirebaseStorage.instanceFor(bucket: 'gs://heavy-6c072').ref(storagePath);
     await ref.putFile(file);
     return ref.getDownloadURL();
   }

@@ -26,7 +26,7 @@ class DefaultFirebaseOptions {
     projectId: 'heavy-6c072',
     authDomain: 'heavy-6c072.firebaseapp.com',
     databaseURL: 'https://heavy-6c072.firebaseio.com',
-    storageBucket: 'heavy-6c072.appspot.com',
+    storageBucket: 'heavy-6c072',
     measurementId: 'G-JPZFQTQD1C',
   );
 
@@ -36,7 +36,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '697210776189',
     projectId: 'heavy-6c072',
     databaseURL: 'https://heavy-6c072.firebaseio.com',
-    storageBucket: 'heavy-6c072.appspot.com',
+    storageBucket: 'heavy-6c072',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -45,7 +45,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '697210776189',
     projectId: 'heavy-6c072',
     databaseURL: 'https://heavy-6c072.firebaseio.com',
-    storageBucket: 'heavy-6c072.appspot.com',
+    storageBucket: 'heavy-6c072',
     iosBundleId: 'com.kidsecure.kidSecure',
   );
 

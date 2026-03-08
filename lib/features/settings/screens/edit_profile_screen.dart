@@ -62,7 +62,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     if (_pickedImage == null) return null;
     setState(() => _uploadingPhoto = true);
     try {
-      final ref = FirebaseStorage.instance.ref('profile_photos/$uid.jpg');
+      final ref = FirebaseStorage.instanceFor(bucket: 'gs://heavy-6c072').ref('profile_photos/$uid.jpg');
       await ref.putFile(_pickedImage!);
       return await ref.getDownloadURL();
     } finally {

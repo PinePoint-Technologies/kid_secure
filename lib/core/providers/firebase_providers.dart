@@ -14,7 +14,7 @@ final firestoreProvider = Provider<FirebaseFirestore>(
 );
 
 final storageProvider = Provider<FirebaseStorage>(
-  (_) => FirebaseStorage.instance,
+  (_) => FirebaseStorage.instanceFor(bucket: 'gs://heavy-6c072'),
 );
 
 final firestoreServiceProvider = Provider<FirestoreService>(

@@ -35,7 +35,7 @@ class SuperAdminShell extends ConsumerWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            Image.asset('assets/images/logo.png', width: 32, height: 32),
+            Image.asset('assets/images/logo2.png', width: 32, height: 32),
             const SizedBox(width: 10),
             const Text('KidSecure Admin'),
           ],

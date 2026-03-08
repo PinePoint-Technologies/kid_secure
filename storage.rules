@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isUnder5MB() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Profile photos — only the owner may write; any signed-in user may read.
+    match /profile_photos/{fileName} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn() && isImage() && isUnder5MB();
+    }
+
+    // Creche logos — any authenticated user (super admin) may upload.
+    match /creche_logos/{fileName} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn() && isImage() && isUnder5MB();
+    }
+
+    // Creche banners
+    match /creche_banners/{fileName} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn() && isImage() && isUnder5MB();
+    }
+  }
+}

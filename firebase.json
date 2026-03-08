@@ -2,6 +2,10 @@
   "firestore": {
     "rules": "firestore.rules"
   },
+  "storage": {
+    "bucket": "heavy-6c072",
+    "rules": "storage.rules"
+  },
   "functions": {
     "source": "functions",
     "runtime": "nodejs20"

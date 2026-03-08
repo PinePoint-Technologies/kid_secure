@@ -238,12 +238,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 8),
           Text('Add your first school to get started',
               style: AppTextStyles.body),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: onAdd,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Add Creche'),
-          ),
+          const SizedBox(height: 24)
         ],
       ),
     );
