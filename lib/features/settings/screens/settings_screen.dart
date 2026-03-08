@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/providers/theme_provider.dart';
 import '../../../core/utils/formatter.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/models/user_model.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -18,6 +19,7 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(currentUserProvider).valueOrNull;
     final settings = ref.watch(settingsProvider);
     final versionAsync = ref.watch(appVersionProvider);
@@ -30,7 +32,7 @@ class SettingsScreen extends ConsumerWidget {
             expandedHeight: 160,
             pinned: true,
             leading: BackButton(onPressed: () => context.pop()),
-            title: const Text('Settings'),
+            title: Text(l10n.settings),
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.pin,
               background: _ProfileHeader(user: user),
@@ -46,14 +48,14 @@ class SettingsScreen extends ConsumerWidget {
                     // ─── Profile section ──────────────────────────────────
                     _Section(
                       delay: 0,
-                      title: 'Profile',
+                      title: l10n.editProfile,
                       icon: Icons.person_rounded,
                       iconColor: AppColors.primary,
                       children: [
                         _Tile(
                           icon: Icons.edit_rounded,
                           iconColor: AppColors.primary,
-                          title: 'Edit Profile',
+                          title: l10n.editProfile,
                           subtitle: user?.displayName ?? '',
                           onTap: () =>
                               context.push(AppRoutes.settingsEditProfile),
@@ -61,7 +63,7 @@ class SettingsScreen extends ConsumerWidget {
                         _Tile(
                           icon: Icons.lock_rounded,
                           iconColor: AppColors.secondary,
-                          title: 'Change Password',
+                          title: l10n.changePassword,
                           onTap: () =>
                               context.push(AppRoutes.settingsChangePassword),
                         ),
@@ -73,14 +75,14 @@ class SettingsScreen extends ConsumerWidget {
                     // ─── Language section ─────────────────────────────────
                     _Section(
                       delay: 60,
-                      title: 'Language',
+                      title: l10n.language,
                       icon: Icons.language_rounded,
                       iconColor: AppColors.accent,
                       children: [
                         _Tile(
                           icon: Icons.translate_rounded,
                           iconColor: AppColors.accent,
-                          title: 'App Language',
+                          title: l10n.appLanguage,
                           subtitle: languageDisplayName(settings.languageCode),
                           trailing: _Arrow(),
                           onTap: () =>
@@ -94,7 +96,7 @@ class SettingsScreen extends ConsumerWidget {
                     // ─── Notifications section ────────────────────────────
                     _Section(
                       delay: 120,
-                      title: 'Notifications',
+                      title: l10n.pushNotifications,
                       icon: Icons.notifications_rounded,
                       iconColor: AppColors.warning,
                       children: [
@@ -104,12 +106,12 @@ class SettingsScreen extends ConsumerWidget {
                           secondary: _IconBadge(
                               Icons.notifications_active_rounded,
                               AppColors.warning),
-                          title: Text('Push Notifications',
+                          title: Text(l10n.pushNotifications,
                               style: AppTextStyles.body),
                           subtitle: Text(
                             settings.pushNotificationsEnabled
-                                ? 'Enabled'
-                                : 'Disabled',
+                                ? l10n.enabled
+                                : l10n.disabled,
                             style: AppTextStyles.caption,
                           ),
                           value: settings.pushNotificationsEnabled,
@@ -121,8 +123,8 @@ class SettingsScreen extends ConsumerWidget {
                         _Tile(
                           icon: Icons.tune_rounded,
                           iconColor: AppColors.warning,
-                          title: 'Alert Preferences',
-                          subtitle: 'Attendance, messages, system',
+                          title: l10n.alertPreferences,
+                          subtitle: l10n.alertPreferencesSubtitle,
                           onTap: () =>
                               context.push(AppRoutes.settingsNotifications),
                         ),
@@ -134,15 +136,15 @@ class SettingsScreen extends ConsumerWidget {
                     // ─── Appearance section ───────────────────────────────
                     _Section(
                       delay: 180,
-                      title: 'Appearance',
+                      title: l10n.theme,
                       icon: Icons.palette_rounded,
                       iconColor: AppColors.success,
                       children: [
                         _Tile(
                           icon: _themeIcon(ref.watch(themeProvider)),
                           iconColor: AppColors.success,
-                          title: 'Theme',
-                          subtitle: _themeLabel(ref.watch(themeProvider)),
+                          title: l10n.theme,
+                          subtitle: _themeLabel(ref.watch(themeProvider), l10n),
                           onTap: () =>
                               context.push(AppRoutes.settingsAppearance),
                         ),
@@ -154,17 +156,17 @@ class SettingsScreen extends ConsumerWidget {
                     // ─── Security section ─────────────────────────────────
                     _Section(
                       delay: 240,
-                      title: 'Security',
+                      title: l10n.biometricSession,
                       icon: Icons.security_rounded,
                       iconColor: AppColors.error,
                       children: [
                         _Tile(
                           icon: Icons.fingerprint_rounded,
                           iconColor: AppColors.error,
-                          title: 'Biometric & Session',
+                          title: l10n.biometricSession,
                           subtitle: settings.biometricEnabled
-                              ? 'Biometric on · ${timeoutLabel(settings.sessionTimeoutMinutes)}'
-                              : 'Auto-lock: ${timeoutLabel(settings.sessionTimeoutMinutes)}',
+                              ? l10n.biometricOnTimeout(timeoutLabel(settings.sessionTimeoutMinutes))
+                              : l10n.autoLockTimeout(timeoutLabel(settings.sessionTimeoutMinutes)),
                           onTap: () =>
                               context.push(AppRoutes.settingsSecurity),
                         ),
@@ -176,7 +178,7 @@ class SettingsScreen extends ConsumerWidget {
                     // ─── Backup & sync ────────────────────────────────────
                     _Section(
                       delay: 300,
-                      title: 'Backup & Sync',
+                      title: l10n.syncPreferences,
                       icon: Icons.cloud_sync_rounded,
                       iconColor: AppColors.info,
                       children: [
@@ -185,10 +187,10 @@ class SettingsScreen extends ConsumerWidget {
                               horizontal: 4),
                           secondary:
                               _IconBadge(Icons.backup_rounded, AppColors.info),
-                          title: Text('Sync Preferences',
+                          title: Text(l10n.syncPreferences,
                               style: AppTextStyles.body),
                           subtitle: Text(
-                            'Sync settings across devices',
+                            l10n.syncSubtitle,
                             style: AppTextStyles.caption,
                           ),
                           value: settings.backupEnabled,
@@ -204,21 +206,21 @@ class SettingsScreen extends ConsumerWidget {
                     // ─── Legal section ────────────────────────────────────
                     _Section(
                       delay: 360,
-                      title: 'Legal & Privacy',
+                      title: l10n.policyConsent,
                       icon: Icons.gavel_rounded,
                       iconColor: AppColors.superAdmin,
                       children: [
                         _Tile(
                           icon: Icons.description_rounded,
                           iconColor: AppColors.superAdmin,
-                          title: 'Terms of Use',
+                          title: l10n.termsOfUse,
                           onTap: () => context.push(AppRoutes.settingsTerms),
                         ),
                         const Divider(height: 1),
                         _Tile(
                           icon: Icons.privacy_tip_rounded,
                           iconColor: AppColors.superAdmin,
-                          title: 'Data Privacy Policy',
+                          title: l10n.dataPrivacyPolicy,
                           onTap: () =>
                               context.push(AppRoutes.settingsPrivacy),
                         ),
@@ -237,14 +239,14 @@ class SettingsScreen extends ConsumerWidget {
                     // ─── Help & support ───────────────────────────────────
                     _Section(
                       delay: 420,
-                      title: 'Help & Support',
+                      title: l10n.faqsSupport,
                       icon: Icons.help_rounded,
                       iconColor: AppColors.secondary,
                       children: [
                         _Tile(
                           icon: Icons.quiz_rounded,
                           iconColor: AppColors.secondary,
-                          title: 'FAQs & Support',
+                          title: l10n.faqsSupport,
                           onTap: () => context.push(AppRoutes.settingsHelp),
                         ),
                       ],
@@ -255,27 +257,27 @@ class SettingsScreen extends ConsumerWidget {
                     // ─── About ────────────────────────────────────────────
                     _Section(
                       delay: 480,
-                      title: 'About',
+                      title: l10n.appVersion,
                       icon: Icons.info_rounded,
                       iconColor: AppColors.textHint,
                       children: [
                         versionAsync.when(
-                          loading: () => const _Tile(
+                          loading: () => _Tile(
                             icon: Icons.tag_rounded,
                             iconColor: AppColors.textHint,
-                            title: 'Version',
-                            subtitle: 'Loading…',
+                            title: l10n.appVersion,
+                            subtitle: l10n.loading,
                           ),
-                          error: (_, __) => const _Tile(
+                          error: (_, __) => _Tile(
                             icon: Icons.tag_rounded,
                             iconColor: AppColors.textHint,
-                            title: 'Version',
-                            subtitle: 'Unknown',
+                            title: l10n.appVersion,
+                            subtitle: l10n.error,
                           ),
                           data: (info) => _Tile(
                             icon: Icons.tag_rounded,
                             iconColor: AppColors.textHint,
-                            title: 'App Version',
+                            title: l10n.appVersion,
                             subtitle: '${info.version} (build ${info.buildNumber})',
                           ),
                         ),
@@ -284,8 +286,8 @@ class SettingsScreen extends ConsumerWidget {
                           _Tile(
                             icon: Icons.admin_panel_settings_rounded,
                             iconColor: AppColors.superAdmin,
-                            title: 'Role',
-                            subtitle: _roleLabel(user.role),
+                            title: l10n.role,
+                            subtitle: _roleLabel(user.role, l10n),
                           ),
                         ],
                       ],
@@ -296,31 +298,30 @@ class SettingsScreen extends ConsumerWidget {
                     // ─── Logout ───────────────────────────────────────────
                     _Section(
                       delay: 540,
-                      title: 'Account',
+                      title: l10n.logOut,
                       icon: Icons.logout_rounded,
                       iconColor: AppColors.error,
                       children: [
                         _Tile(
                           icon: Icons.logout_rounded,
                           iconColor: AppColors.error,
-                          title: 'Log Out',
+                          title: l10n.logOut,
                           onTap: () async {
                             final confirmed = await showDialog<bool>(
                               context: context,
                               builder: (ctx) => AlertDialog(
-                                title: const Text('Log Out'),
-                                content: const Text(
-                                    'Are you sure you want to log out?'),
+                                title: Text(l10n.logOut),
+                                content: Text(l10n.logOutConfirm),
                                 actions: [
                                   TextButton(
                                     onPressed: () =>
                                         Navigator.pop(ctx, false),
-                                    child: const Text('Cancel'),
+                                    child: Text(l10n.cancel),
                                   ),
                                   TextButton(
                                     onPressed: () =>
                                         Navigator.pop(ctx, true),
-                                    child: Text('Log Out',
+                                    child: Text(l10n.logOut,
                                         style: TextStyle(
                                             color: AppColors.error)),
                                   ),
@@ -354,16 +355,16 @@ class SettingsScreen extends ConsumerWidget {
         _ => Icons.light_mode_rounded,
       };
 
-  String _themeLabel(ThemeMode mode) => switch (mode) {
-        ThemeMode.dark => 'Dark',
-        ThemeMode.system => 'System Default',
-        _ => 'Light',
+  String _themeLabel(ThemeMode mode, AppLocalizations l10n) => switch (mode) {
+        ThemeMode.dark => l10n.dark,
+        ThemeMode.system => l10n.systemDefault,
+        _ => l10n.light,
       };
 
-  String _roleLabel(UserRole role) => switch (role) {
-        UserRole.superAdmin => 'Super Administrator',
-        UserRole.teacher => 'Teacher',
-        UserRole.parent => 'Parent',
+  String _roleLabel(UserRole role, AppLocalizations l10n) => switch (role) {
+        UserRole.superAdmin => l10n.superAdministrator,
+        UserRole.teacher => l10n.teacherRole,
+        UserRole.parent => l10n.parentRole,
       };
 }
 
@@ -405,7 +406,7 @@ class _ProfileHeader extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Text(
-                  user?.displayName ?? 'User',
+                  user?.displayName ?? AppLocalizations.of(context)!.userFallback,
                   style: AppTextStyles.titleMedium
                       .copyWith(color: Colors.white),
                 ),
@@ -535,15 +536,16 @@ class _ConsentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
       leading: _IconBadge(
         consent ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
         consent ? AppColors.success : AppColors.textHint,
       ),
-      title: Text('Policy Consent', style: AppTextStyles.body),
+      title: Text(l10n.policyConsent, style: AppTextStyles.body),
       subtitle: Text(
-        consent ? 'You have agreed to the policies.' : 'Tap to review and accept.',
+        consent ? l10n.policyAgreed : l10n.policyTapToReview,
         style: AppTextStyles.caption,
       ),
       onTap: () => onChanged(!consent),

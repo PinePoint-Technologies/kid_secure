@@ -6,6 +6,7 @@ import '../../../core/providers/firebase_providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../providers/auth_provider.dart';
 
@@ -55,6 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     });
 
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -91,22 +93,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('KidSecure',
+                      Text(l10n.appName,
                           style: AppTextStyles.headline2
                               .copyWith(color: AppColors.primary)),
-                      Text('Creche Management Platform',
+                      Text(l10n.appTagline,
                           style: AppTextStyles.caption),
                     ],
                   ),
                 ],
               ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.2),
               const SizedBox(height: 48),
-              Text('Welcome back', style: AppTextStyles.headline1)
+              Text(l10n.welcomeBack, style: AppTextStyles.headline1)
                   .animate(delay: 100.ms)
                   .fadeIn(duration: 400.ms)
                   .slideY(begin: 0.2),
               const SizedBox(height: 6),
-              Text('Sign in to continue', style: AppTextStyles.body)
+              Text(l10n.signInToContinue, style: AppTextStyles.body)
                   .animate(delay: 150.ms)
                   .fadeIn(duration: 400.ms),
               const SizedBox(height: 36),
@@ -119,15 +121,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Email address',
-                        prefixIcon: Icon(Icons.email_outlined),
+                      decoration: InputDecoration(
+                        labelText: l10n.emailAddress,
+                        prefixIcon: const Icon(Icons.email_outlined),
                       ),
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Email is required';
-                        }
-                        if (!v.contains('@')) return 'Enter a valid email';
+                        if (v == null || v.trim().isEmpty) return l10n.emailRequired;
+                        if (!v.contains('@')) return l10n.enterValidEmail;
                         return null;
                       },
                     ).animate(delay: 200.ms).fadeIn(duration: 400.ms),
@@ -139,7 +139,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
-                        labelText: 'Password',
+                        labelText: l10n.password,
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
                           onPressed: () =>
@@ -150,8 +150,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Password is required';
-                        if (v.length < 6) return 'Min. 6 characters';
+                        if (v == null || v.isEmpty) return l10n.passwordRequired;
+                        if (v.length < 6) return l10n.minSixChars;
                         return null;
                       },
                     ).animate(delay: 250.ms).fadeIn(duration: 400.ms),
@@ -161,13 +161,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () => _showForgotPassword(context),
-                        child: const Text('Forgot password?'),
+                        child: Text(l10n.forgotPassword),
                       ),
                     ).animate(delay: 300.ms).fadeIn(duration: 400.ms),
                     const SizedBox(height: 24),
                     // Sign in button
                     GradientButton(
-                      label: 'Sign In',
+                      label: l10n.signIn,
                       onPressed: _submit,
                       isLoading: isLoading,
                       icon: Icons.login_rounded,
@@ -177,11 +177,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text("Don't have an account? ",
+                        Text(l10n.dontHaveAccount,
                             style: AppTextStyles.bodyMedium),
                         TextButton(
                           onPressed: () => context.go(AppRoutes.register),
-                          child: const Text('Register'),
+                          child: Text(l10n.register),
                         ),
                       ],
                     ).animate(delay: 400.ms).fadeIn(duration: 400.ms),
@@ -191,7 +191,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         onPressed: () => context.go(AppRoutes.setup),
                         icon: const Icon(Icons.admin_panel_settings_rounded,
                             size: 18),
-                        label: const Text('First-time Setup (Create Admin)'),
+                        label: Text(l10n.firstTimeSetup),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.accent,
                         ),
@@ -207,6 +207,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _showForgotPassword(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final ctrl = TextEditingController();
     showModalBottomSheet(
       context: context,
@@ -221,22 +222,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Reset Password', style: AppTextStyles.headline3),
+            Text(l10n.resetPassword, style: AppTextStyles.headline3),
             const SizedBox(height: 8),
-            Text('Enter your email to receive a reset link.',
-                style: AppTextStyles.body),
+            Text(l10n.enterEmailForReset, style: AppTextStyles.body),
             const SizedBox(height: 20),
             TextField(
               controller: ctrl,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email address',
-                prefixIcon: Icon(Icons.email_outlined),
+              decoration: InputDecoration(
+                labelText: l10n.emailAddress,
+                prefixIcon: const Icon(Icons.email_outlined),
               ),
             ),
             const SizedBox(height: 20),
             GradientButton(
-              label: 'Send Reset Link',
+              label: l10n.sendResetLink,
               onPressed: () async {
                 await ref
                     .read(authNotifierProvider.notifier)
@@ -244,8 +244,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Reset email sent. Check your inbox.'),
+                    SnackBar(
+                      content: Text(l10n.resetEmailSent),
                       backgroundColor: AppColors.success,
                     ),
                   );

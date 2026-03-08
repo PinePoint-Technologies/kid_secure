@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../core/router/app_router.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/models/user_model.dart';
@@ -104,13 +105,14 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
   // ── Validating ─────────────────────────────────────────────────────────────
 
   Widget _buildValidating() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: 20),
-          Text('Verifying invite…', style: AppTextStyles.body),
+          Text(l10n.verifyingInvite, style: AppTextStyles.body),
         ],
       ),
     );
@@ -119,6 +121,7 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
   // ── Invalid / Expired ─────────────────────────────────────────────────────
 
   Widget _buildInvalid(String message) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -137,7 +140,7 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
             ),
           ).animate().scale(duration: 400.ms),
           const SizedBox(height: 24),
-          Text('Invite Unavailable',
+          Text(l10n.inviteUnavailable,
               style: AppTextStyles.headline2, textAlign: TextAlign.center)
               .animate(delay: 100.ms)
               .fadeIn(),
@@ -151,7 +154,7 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
           FilledButton.icon(
             onPressed: () => context.go(AppRoutes.login),
             icon: const Icon(Icons.arrow_back_rounded),
-            label: const Text('Back to Login'),
+            label: Text(l10n.backToLogin),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary,
               padding:
@@ -168,10 +171,11 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
   // ── Registration Form ─────────────────────────────────────────────────────
 
   Widget _buildForm(InviteRegisterStatus status) {
+    final l10n = AppLocalizations.of(context)!;
     final valid = _validState!;
     final isLoading = status is InviteRegistering;
     final errorMsg = status is InviteError ? (status).message : null;
-    final roleLabel = valid.role == 'teacher' ? 'Teacher' : 'Parent';
+    final roleLabel = valid.role == 'teacher' ? l10n.teacherRole : l10n.parentRole;
     final roleColor =
         valid.role == 'teacher' ? AppColors.teacher : AppColors.parent;
     final roleGradient = valid.role == 'teacher'
@@ -194,14 +198,14 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                'Invited as $roleLabel',
+                l10n.invitedAs(roleLabel),
                 style:
                     AppTextStyles.label.copyWith(color: Colors.white),
               ),
             ).animate().fadeIn(duration: 400.ms),
             const SizedBox(height: 16),
 
-            Text('Create your account', style: AppTextStyles.headline2)
+            Text(l10n.createAccount, style: AppTextStyles.headline2)
                 .animate(delay: 50.ms)
                 .fadeIn(),
             const SizedBox(height: 4),
@@ -213,10 +217,10 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
             // Full Name
             _Field(
               controller: _nameCtrl,
-              label: 'Full Name',
+              label: l10n.fullName,
               icon: Icons.person_rounded,
               validator: (v) => v == null || v.trim().isEmpty
-                  ? 'Name is required'
+                  ? l10n.nameRequired
                   : null,
             ).animate(delay: 150.ms).fadeIn().slideY(begin: 0.2),
             const SizedBox(height: 16),
@@ -224,18 +228,18 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
             // Email
             _Field(
               controller: _emailCtrl,
-              label: 'Email',
+              label: l10n.emailAddress,
               icon: Icons.email_rounded,
               keyboardType: TextInputType.emailAddress,
               validator: (v) =>
-                  v == null || !v.contains('@') ? 'Enter a valid email' : null,
+                  v == null || !v.contains('@') ? l10n.enterValidEmail : null,
             ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.2),
             const SizedBox(height: 16),
 
             // Phone (optional)
             _Field(
               controller: _phoneCtrl,
-              label: 'Phone (optional)',
+              label: l10n.phoneOptional,
               icon: Icons.phone_rounded,
               keyboardType: TextInputType.phone,
             ).animate(delay: 250.ms).fadeIn().slideY(begin: 0.2),
@@ -246,7 +250,7 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
               controller: _passCtrl,
               obscureText: _obscurePass,
               decoration: InputDecoration(
-                labelText: 'Password',
+                labelText: l10n.password,
                 prefixIcon: const Icon(Icons.lock_rounded),
                 suffixIcon: IconButton(
                   icon: Icon(_obscurePass
@@ -257,7 +261,7 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
                 ),
               ),
               validator: (v) => v == null || v.length < 8
-                  ? 'Password must be at least 8 characters'
+                  ? l10n.passwordMinEight
                   : null,
             ).animate(delay: 300.ms).fadeIn().slideY(begin: 0.2),
             const SizedBox(height: 16),
@@ -267,7 +271,7 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
               controller: _confirmCtrl,
               obscureText: _obscureConfirm,
               decoration: InputDecoration(
-                labelText: 'Confirm Password',
+                labelText: l10n.confirmPassword,
                 prefixIcon: const Icon(Icons.lock_outline_rounded),
                 suffixIcon: IconButton(
                   icon: Icon(_obscureConfirm
@@ -278,7 +282,7 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
                 ),
               ),
               validator: (v) =>
-                  v != _passCtrl.text ? 'Passwords do not match' : null,
+                  v != _passCtrl.text ? l10n.passwordsDoNotMatch : null,
             ).animate(delay: 350.ms).fadeIn().slideY(begin: 0.2),
             const SizedBox(height: 28),
 
@@ -325,8 +329,8 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('Create Account',
-                        style: TextStyle(fontSize: 16)),
+                    : Text(l10n.createAccount,
+                        style: const TextStyle(fontSize: 16)),
               ),
             ).animate(delay: 400.ms).fadeIn(),
             const SizedBox(height: 16),
@@ -334,7 +338,7 @@ class _InviteRegisterScreenState extends ConsumerState<InviteRegisterScreen> {
             Center(
               child: TextButton(
                 onPressed: () => context.go(AppRoutes.login),
-                child: const Text('Already have an account? Sign in'),
+                child: Text(l10n.alreadyHaveAccount),
               ),
             ),
           ],
@@ -361,7 +365,7 @@ class _CrecheNameLabel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final future = ref.watch(_crecheNameProvider(crecheId));
     return future.when(
-      loading: () => Text('Loading crèche…',
+      loading: () => Text(AppLocalizations.of(context)!.loadingCreche,
           style: AppTextStyles.body
               .copyWith(color: AppColors.textSecondary)),
       error: (_, __) => const SizedBox(),
@@ -370,9 +374,12 @@ class _CrecheNameLabel extends ConsumerWidget {
           const Icon(Icons.school_rounded,
               size: 16, color: AppColors.textSecondary),
           const SizedBox(width: 6),
-          Text(name,
-              style: AppTextStyles.body
-                  .copyWith(color: AppColors.textSecondary)),
+          Expanded(
+            child: Text(name,
+                style: AppTextStyles.body
+                    .copyWith(color: AppColors.textSecondary),
+                overflow: TextOverflow.ellipsis),
+          ),
         ],
       ),
     );

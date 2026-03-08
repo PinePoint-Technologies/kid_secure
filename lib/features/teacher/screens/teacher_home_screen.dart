@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatter.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/models/attendance_model.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/invite_link_dialog.dart';
@@ -57,8 +58,8 @@ class _TeacherHomeScreenState extends ConsumerState<TeacherHomeScreen> {
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to generate invite. Please try again.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.failedToGenerateInvite),
             backgroundColor: AppColors.error,
           ),
         );
@@ -73,13 +74,14 @@ class _TeacherHomeScreenState extends ConsumerState<TeacherHomeScreen> {
     final attendanceAsync = ref.watch(todayAttendanceProvider);
     final sickLeaveAsync = ref.watch(pendingSickLeaveProvider);
 
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final greeting = switch (now.hour) {
-      < 12 => 'Good morning',
-      < 17 => 'Good afternoon',
-      _ => 'Good evening',
+      < 12 => l10n.goodMorning,
+      < 17 => l10n.goodAfternoon,
+      _ => l10n.goodEvening,
     };
-    final firstName = user?.displayName.split(' ').first ?? 'Teacher';
+    final firstName = user?.displayName.split(' ').first ?? l10n.teacherRole;
 
     return CustomScrollView(
       controller: _scrollCtrl,
@@ -98,7 +100,7 @@ class _TeacherHomeScreenState extends ConsumerState<TeacherHomeScreen> {
                 opacity: _nameVisible ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 200),
                 child: Text(
-                  user?.displayName ?? 'Teacher',
+                  user?.displayName ?? l10n.teacherRole,
                   style: AppTextStyles.titleMedium,
                 ),
               ),
@@ -185,21 +187,21 @@ class _TeacherHomeScreenState extends ConsumerState<TeacherHomeScreen> {
                       return Row(
                         children: [
                           _DashStat(
-                            label: 'Total Kids',
+                            label: l10n.totalKids,
                             value: '${children.length}',
                             icon: Icons.child_care_rounded,
                             gradient: AppColors.primaryGradient,
                           ),
                           const SizedBox(width: 10),
                           _DashStat(
-                            label: 'Present',
+                            label: l10n.present,
                             value: '$signedIn',
                             icon: Icons.check_circle_rounded,
                             gradient: AppColors.parentGradient,
                           ),
                           const SizedBox(width: 10),
                           _DashStat(
-                            label: 'Absent',
+                            label: l10n.absent,
                             value: '$absent',
                             icon: Icons.person_off_rounded,
                             gradient: const LinearGradient(colors: [
@@ -241,12 +243,12 @@ class _TeacherHomeScreenState extends ConsumerState<TeacherHomeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${sickLeaves.length} sick leave pending',
+                                  l10n.sickLeavePending(sickLeaves.length),
                                   style: AppTextStyles.titleMedium.copyWith(
                                     color: AppColors.warning,
                                   ),
                                 ),
-                                Text('Review and approve below.',
+                                Text(l10n.reviewAndApprove,
                                     style: AppTextStyles.caption),
                               ],
                             ),
@@ -262,7 +264,7 @@ class _TeacherHomeScreenState extends ConsumerState<TeacherHomeScreen> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-            child: Text('Quick Actions', style: AppTextStyles.title)
+            child: Text(l10n.quickActions, style: AppTextStyles.title)
                 .animate(delay: 250.ms)
                 .fadeIn(duration: 400.ms),
           ),
@@ -276,47 +278,47 @@ class _TeacherHomeScreenState extends ConsumerState<TeacherHomeScreen> {
             crossAxisSpacing: 12,
             children: [
               _QuickAction(
-                label: 'View Kids',
+                label: l10n.viewKids,
                 icon: Icons.child_care_rounded,
                 gradient: AppColors.primaryGradient,
                 onTap: () => context.go(AppRoutes.teacherKids),
               ),
               _QuickAction(
-                label: 'Attendance',
+                label: l10n.attendance,
                 icon: Icons.checklist_rounded,
                 gradient: AppColors.teacherGradient,
                 onTap: () => context.go(AppRoutes.teacherAttendance),
               ),
               _QuickAction(
-                label: 'Add Kid',
+                label: l10n.addKid,
                 icon: Icons.person_add_rounded,
                 gradient: AppColors.parentGradient,
                 onTap: () => context.go(AppRoutes.teacherAddKid),
               ),
               _QuickAction(
-                label: 'Sick Leave',
+                label: l10n.navSickLeave,
                 icon: Icons.local_hospital_rounded,
                 gradient: const LinearGradient(
                     colors: [AppColors.superAdmin, AppColors.error]),
                 onTap: () => context.go(AppRoutes.teacherSickLeave),
               ),
               _QuickAction(
-                label: 'Guardian Check-In',
+                label: l10n.guardianCheckin,
                 icon: Icons.badge_rounded,
                 gradient: AppColors.accentGradient,
                 onTap: () =>
                     context.go(AppRoutes.teacherGuardianCheckin),
               ),
               _QuickAction(
-                label: 'Invite Parent',
+                label: l10n.inviteParent,
                 icon: Icons.person_add_alt_1_rounded,
                 gradient: AppColors.accentGradient,
                 onTap: () {
                   final crecheId = user?.crecheIds.firstOrNull ?? '';
                   if (crecheId.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('No crèche assigned to your account.'),
+                      SnackBar(
+                        content: Text(l10n.noCrecheAssigned),
                       ),
                     );
                     return;

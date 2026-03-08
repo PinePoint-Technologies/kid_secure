@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/formatter.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class TeacherShell extends ConsumerStatefulWidget {
@@ -17,16 +18,18 @@ class TeacherShell extends ConsumerStatefulWidget {
 class _TeacherShellState extends ConsumerState<TeacherShell> {
   int _currentIndex = 0;
 
-  static const _tabs = [
-    (AppRoutes.teacher, Icons.dashboard_rounded, 'Home'),
-    (AppRoutes.teacherKids, Icons.child_care_rounded, 'Kids'),
-    (AppRoutes.teacherAttendance, Icons.checklist_rounded, 'Attendance'),
-    (AppRoutes.teacherSickLeave, Icons.local_hospital_rounded, 'Sick Leave'),
+  static const _tabRoutes = [
+    (AppRoutes.teacher, Icons.dashboard_rounded),
+    (AppRoutes.teacherKids, Icons.child_care_rounded),
+    (AppRoutes.teacherAttendance, Icons.checklist_rounded),
+    (AppRoutes.teacherSickLeave, Icons.local_hospital_rounded),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(currentUserProvider).valueOrNull;
+    final tabLabels = [l10n.navHome, l10n.navKids, l10n.navAttendance, l10n.navSickLeave];
 
     return Scaffold(
       appBar: _currentIndex == 0
@@ -36,7 +39,7 @@ class _TeacherShellState extends ConsumerState<TeacherShell> {
                 children: [
                   Image.asset('assets/images/logo2.png', width: 32, height: 32),
                   const SizedBox(width: 10),
-                  const Text('KidSecure'),
+                  Text(l10n.appName),
                 ],
               ),
               actions: [
@@ -80,14 +83,15 @@ class _TeacherShellState extends ConsumerState<TeacherShell> {
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) {
           setState(() => _currentIndex = i);
-          context.go(_tabs[i].$1);
+          context.go(_tabRoutes[i].$1);
         },
-        destinations: _tabs
-            .map((t) => NavigationDestination(
-                  icon: Icon(t.$2),
-                  label: t.$3,
-                ))
-            .toList(),
+        destinations: List.generate(
+          _tabRoutes.length,
+          (i) => NavigationDestination(
+            icon: Icon(_tabRoutes[i].$2),
+            label: tabLabels[i],
+          ),
+        ),
       ),
     );
   }

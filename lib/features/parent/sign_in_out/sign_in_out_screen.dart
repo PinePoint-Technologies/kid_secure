@@ -12,6 +12,7 @@ import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/guardian_pin_dialog.dart';
 import '../../../shared/widgets/kid_avatar.dart';
 import '../../../shared/widgets/status_chip.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/parent_provider.dart';
 
@@ -94,10 +95,10 @@ class _SignInOutScreenState extends ConsumerState<SignInOutScreen>
       children: [
         TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.touch_app_rounded), text: 'Manual'),
-            Tab(icon: Icon(Icons.qr_code_scanner_rounded), text: 'QR Scan'),
-            Tab(icon: Icon(Icons.badge_rounded), text: 'Guardian'),
+          tabs: [
+            Tab(icon: const Icon(Icons.touch_app_rounded), text: AppLocalizations.of(context)!.manual),
+            Tab(icon: const Icon(Icons.qr_code_scanner_rounded), text: AppLocalizations.of(context)!.qrScan),
+            Tab(icon: const Icon(Icons.badge_rounded), text: AppLocalizations.of(context)!.guardian),
           ],
         ),
         Expanded(
@@ -108,13 +109,13 @@ class _SignInOutScreenState extends ConsumerState<SignInOutScreen>
               childrenAsync.when(
                 loading: () =>
                     const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
+                error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorMessage(e.toString()))),
                 data: (children) => SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Select Child', style: AppTextStyles.title)
+                      Text(AppLocalizations.of(context)!.selectChild, style: AppTextStyles.title)
                           .animate()
                           .fadeIn(duration: 400.ms),
                       const SizedBox(height: 12),
@@ -159,7 +160,7 @@ class _SignInOutScreenState extends ConsumerState<SignInOutScreen>
                                               style:
                                                   AppTextStyles.titleMedium),
                                           Text(
-                                              'Age: ${Formatter.age(child.dateOfBirth)}',
+                                              AppLocalizations.of(context)!.ageLabel(Formatter.age(child.dateOfBirth)),
                                               style: AppTextStyles.bodySmall),
                                         ],
                                       ),
@@ -194,7 +195,7 @@ class _SignInOutScreenState extends ConsumerState<SignInOutScreen>
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      'Scan a child\'s QR code to sign in or out',
+                      AppLocalizations.of(context)!.scanQrDescription,
                       style: AppTextStyles.body,
                       textAlign: TextAlign.center,
                     ),
@@ -268,10 +269,11 @@ class _SignInOutScreenState extends ConsumerState<SignInOutScreen>
           (c) => c?.qrCode == qrCode,
           orElse: () => null,
         );
+    final l10n = AppLocalizations.of(context)!;
     if (child == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('QR code not recognised.'),
+        SnackBar(
+          content: Text(l10n.qrNotRecognised),
           backgroundColor: AppColors.error,
         ),
       );
@@ -283,7 +285,7 @@ class _SignInOutScreenState extends ConsumerState<SignInOutScreen>
     _tabController.animateTo(0);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${child.fullName} identified! Tap sign in/out below.'),
+        content: Text(l10n.childIdentified(child.fullName)),
         backgroundColor: AppColors.success,
       ),
     );
@@ -309,30 +311,32 @@ class _AttendanceActions extends ConsumerWidget {
 
     return attendanceAsync.when(
       loading: () => const CircularProgressIndicator(),
-      error: (e, _) => Text('Error: $e', style: AppTextStyles.bodySmall),
-      data: (record) => AppCard(
+      error: (e, _) => Text(AppLocalizations.of(context)!.errorMessage(e.toString()), style: AppTextStyles.bodySmall),
+      data: (record) {
+        final l10n = AppLocalizations.of(context)!;
+        return AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${child.firstName}\'s Status', style: AppTextStyles.title),
+            Text(l10n.childStatus(child.firstName), style: AppTextStyles.title),
             const SizedBox(height: 10),
             if (record != null) ...[
               StatusChip(status: record.status),
               if (record.signInTime != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Signed in at ${Formatter.time(record.signInTime!)}',
+                  l10n.signedInAt(Formatter.time(record.signInTime!)),
                   style: AppTextStyles.bodySmall,
                 ),
               ],
             ] else
-              Text('Not yet signed in today', style: AppTextStyles.bodySmall),
+              Text(l10n.notYetSignedInToday, style: AppTextStyles.bodySmall),
             const SizedBox(height: 16),
             if (record == null ||
                 record.status == AttendanceStatus.signedOut ||
                 record.status == AttendanceStatus.absent)
               GradientButton(
-                label: 'Sign In',
+                label: l10n.signIn,
                 onPressed: () async {
                   await ref.read(signInOutProvider.notifier).signIn(
                         childId: child.id,
@@ -347,7 +351,7 @@ class _AttendanceActions extends ConsumerWidget {
               )
             else if (record.status == AttendanceStatus.signedIn)
               GradientButton(
-                label: 'Sign Out',
+                label: l10n.signOut,
                 onPressed: () async {
                   await ref.read(signInOutProvider.notifier).signOut(
                         recordId: record.id,
@@ -362,7 +366,8 @@ class _AttendanceActions extends ConsumerWidget {
               ),
           ],
         ),
-      ),
+        );
+      },
     );
   }
 }
@@ -388,13 +393,13 @@ class _GuardianTabState extends ConsumerState<_GuardianTab> {
   Widget build(BuildContext context) {
     return widget.childrenAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorMessage(e.toString()))),
       data: (children) => SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Select Child', style: AppTextStyles.title)
+            Text(AppLocalizations.of(context)!.selectChild, style: AppTextStyles.title)
                 .animate()
                 .fadeIn(duration: 400.ms),
             const SizedBox(height: 12),
@@ -436,7 +441,7 @@ class _GuardianTabState extends ConsumerState<_GuardianTab> {
                                 Text(child.fullName,
                                     style: AppTextStyles.titleMedium),
                                 Text(
-                                    'Age: ${Formatter.age(child.dateOfBirth)}',
+                                    AppLocalizations.of(context)!.ageLabel(Formatter.age(child.dateOfBirth)),
                                     style: AppTextStyles.bodySmall),
                               ],
                             ),
@@ -453,7 +458,7 @@ class _GuardianTabState extends ConsumerState<_GuardianTab> {
             }),
             if (_selectedChild != null) ...[
               const SizedBox(height: 20),
-              Text('Guardians', style: AppTextStyles.title)
+              Text(AppLocalizations.of(context)!.navGuardians, style: AppTextStyles.title)
                   .animate(delay: 200.ms)
                   .fadeIn(duration: 400.ms),
               const SizedBox(height: 12),
@@ -482,7 +487,7 @@ class _GuardianActionList extends ConsumerWidget {
 
     return guardiansAsync.when(
       loading: () => const CircularProgressIndicator(),
-      error: (e, _) => Text('Error: $e'),
+      error: (e, _) => Text(AppLocalizations.of(context)!.errorMessage(e.toString())),
       data: (guardians) {
         if (guardians.isEmpty) {
           return AppCard(
@@ -491,7 +496,7 @@ class _GuardianActionList extends ConsumerWidget {
                 const Icon(Icons.info_outline_rounded,
                     color: AppColors.textHint),
                 const SizedBox(width: 10),
-                Text('No guardians added yet',
+                Text(AppLocalizations.of(context)!.noGuardians,
                     style: AppTextStyles.bodyMedium),
               ],
             ),
@@ -542,7 +547,7 @@ class _GuardianActionList extends ConsumerWidget {
                               color: AppColors.textHint.withAlpha(26),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text('No permission',
+                            child: Text(AppLocalizations.of(context)!.noPermission,
                                 style: AppTextStyles.caption
                                     .copyWith(color: AppColors.textHint)),
                           ),
@@ -584,7 +589,7 @@ class _GuardianActionList extends ConsumerWidget {
                                       },
                                 icon: const Icon(Icons.login_rounded,
                                     size: 16),
-                                label: const Text('Sign In'),
+                                label: Text(AppLocalizations.of(context)!.signIn),
                                 style: FilledButton.styleFrom(
                                     backgroundColor: AppColors.success),
                               ),
@@ -619,7 +624,7 @@ class _GuardianActionList extends ConsumerWidget {
                                       },
                                 icon: const Icon(Icons.logout_rounded,
                                     size: 16),
-                                label: const Text('Sign Out'),
+                                label: Text(AppLocalizations.of(context)!.signOut),
                                 style: FilledButton.styleFrom(
                                     backgroundColor: AppColors.error),
                               ),

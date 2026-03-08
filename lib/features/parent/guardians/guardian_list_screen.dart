@@ -9,6 +9,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatter.dart';
 import '../../../shared/models/guardian_model.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../l10n/app_localizations.dart';
 import '../providers/parent_provider.dart';
 
 class GuardianListScreen extends ConsumerWidget {
@@ -16,6 +17,7 @@ class GuardianListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final childrenAsync = ref.watch(parentChildrenProvider);
 
     return Scaffold(
@@ -23,13 +25,13 @@ class GuardianListScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (children) => children.isEmpty
-            ? const Center(child: Text('No children linked yet.'))
+            ? Center(child: Text(l10n.noChildrenLinked))
             : CustomScrollView(
                 slivers: [
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                      child: Text('Trusted Guardians',
+                      child: Text(l10n.trustedGuardians,
                               style: AppTextStyles.headline2)
                           .animate()
                           .fadeIn(duration: 400.ms),
@@ -53,7 +55,7 @@ class GuardianListScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go(AppRoutes.parentAddGuardian),
         icon: const Icon(Icons.person_add_rounded),
-        label: const Text('Add Guardian'),
+        label: Text(l10n.addGuardian),
       ),
     );
   }
@@ -65,6 +67,7 @@ class _GuardianList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final guardiansAsync = ref.watch(childGuardiansProvider(childId));
 
     return guardiansAsync.when(
@@ -81,7 +84,7 @@ class _GuardianList extends ConsumerWidget {
                       const Icon(Icons.info_outline_rounded,
                           color: AppColors.textHint),
                       const SizedBox(width: 10),
-                      Text('No guardians added yet',
+                      Text(l10n.noGuardians,
                           style: AppTextStyles.bodyMedium),
                     ],
                   ),
@@ -96,23 +99,24 @@ class _GuardianList extends ConsumerWidget {
                 itemBuilder: (_, i) => _GuardianCard(
                   guardian: guardians[i],
                   onRemove: () async {
+                    final l10n = AppLocalizations.of(context)!;
                     final confirm = await showDialog<bool>(
                       context: context,
                       useRootNavigator: true,
                       builder: (dialogCtx) => AlertDialog(
-                        title: const Text('Remove Guardian'),
+                        title: Text(l10n.removeGuardian),
                         content: Text(
-                            'Remove ${guardians[i].fullName} as a guardian?'),
+                            l10n.removeGuardianConfirm(guardians[i].fullName)),
                         actions: [
                           TextButton(
                               onPressed: () => Navigator.of(dialogCtx,
                                   rootNavigator: true).pop(false),
-                              child: const Text('Cancel')),
+                              child: Text(l10n.cancel)),
                           TextButton(
                               onPressed: () => Navigator.of(dialogCtx,
                                   rootNavigator: true).pop(true),
-                              child: const Text('Remove',
-                                  style:
+                              child: Text(l10n.remove,
+                                  style: const
                                       TextStyle(color: AppColors.error))),
                         ],
                       ),
@@ -150,7 +154,7 @@ class _GuardianCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Show this QR to the teacher for gate check-in',
+              AppLocalizations.of(context)!.showQrDescription,
               style: AppTextStyles.bodySmall,
               textAlign: TextAlign.center,
             ),
@@ -168,7 +172,7 @@ class _GuardianCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx, rootNavigator: true).pop(),
-            child: const Text('Close'),
+            child: Text(AppLocalizations.of(context)!.close),
           ),
         ],
       ),
@@ -203,14 +207,14 @@ class _GuardianCard extends StatelessWidget {
                 Row(
                   children: [
                     if (guardian.canSignIn)
-                      _pill('Sign In', AppColors.success),
+                      _pill(AppLocalizations.of(context)!.permSignIn, AppColors.success),
                     if (guardian.canSignIn && guardian.canSignOut)
                       const SizedBox(width: 4),
                     if (guardian.canSignOut)
-                      _pill('Sign Out', AppColors.primary),
+                      _pill(AppLocalizations.of(context)!.permSignOut, AppColors.primary),
                     if (guardian.isVerified) ...[
                       const SizedBox(width: 4),
-                      _pill('Verified ✓', AppColors.accent),
+                      _pill(AppLocalizations.of(context)!.permVerified, AppColors.accent),
                     ],
                   ],
                 ),
@@ -221,7 +225,7 @@ class _GuardianCard extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.qr_code_rounded,
                   color: AppColors.primary),
-              tooltip: 'Show QR',
+              tooltip: AppLocalizations.of(context)!.showQr,
               onPressed: () => _showQr(context),
             ),
           IconButton(

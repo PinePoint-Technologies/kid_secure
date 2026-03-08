@@ -4,18 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/formatter.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class SuperAdminShell extends ConsumerWidget {
   final Widget child;
   const SuperAdminShell({super.key, required this.child});
 
-  static const _tabs = [
-    (route: AppRoutes.superAdmin, icon: Icons.dashboard_rounded, label: 'Dashboard'),
-    (route: AppRoutes.superAdminCreches, icon: Icons.school_rounded, label: 'Crèches'),
-    (route: AppRoutes.superAdminParents, icon: Icons.family_restroom_rounded, label: 'Parents'),
-    (route: AppRoutes.superAdminKids, icon: Icons.child_care_rounded, label: 'Kids'),
-    (route: AppRoutes.superAdminReports, icon: Icons.bar_chart_rounded, label: 'Reports'),
+  static const _tabRoutes = [
+    (route: AppRoutes.superAdmin, icon: Icons.dashboard_rounded),
+    (route: AppRoutes.superAdminCreches, icon: Icons.school_rounded),
+    (route: AppRoutes.superAdminParents, icon: Icons.family_restroom_rounded),
+    (route: AppRoutes.superAdminKids, icon: Icons.child_care_rounded),
+    (route: AppRoutes.superAdminReports, icon: Icons.bar_chart_rounded),
   ];
 
   int _tabIndex(String location) {
@@ -26,10 +27,13 @@ class SuperAdminShell extends ConsumerWidget {
     return 0;
   }
 
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(currentUserProvider).valueOrNull;
     final location = GoRouterState.of(context).uri.toString();
+    final tabLabels = [l10n.navDashboard, l10n.navCreches, l10n.navParents, l10n.navKids, l10n.navReports];
 
     return Scaffold(
       appBar: AppBar(
@@ -37,7 +41,7 @@ class SuperAdminShell extends ConsumerWidget {
           children: [
             Image.asset('assets/images/logo2.png', width: 32, height: 32),
             const SizedBox(width: 10),
-            const Text('KidSecure Admin'),
+            Text(l10n.kidSecureAdmin),
           ],
         ),
         actions: [
@@ -76,14 +80,14 @@ class SuperAdminShell extends ConsumerWidget {
       body: child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tabIndex(location),
-        onDestinationSelected: (i) => context.go(_tabs[i].route),
-        destinations: [
-          for (final tab in _tabs)
-            NavigationDestination(
-              icon: Icon(tab.icon),
-              label: tab.label,
-            ),
-        ],
+        onDestinationSelected: (i) => context.go(_tabRoutes[i].route),
+        destinations: List.generate(
+          _tabRoutes.length,
+          (i) => NavigationDestination(
+            icon: Icon(_tabRoutes[i].icon),
+            label: tabLabels[i],
+          ),
+        ),
       ),
     );
   }

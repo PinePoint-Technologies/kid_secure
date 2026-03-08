@@ -9,6 +9,7 @@ import '../../../core/utils/formatter.dart';
 import '../../../shared/models/child_model.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/kid_avatar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../providers/teacher_provider.dart';
 
 class KidsListScreen extends ConsumerStatefulWidget {
@@ -23,12 +24,13 @@ class _KidsListScreenState extends ConsumerState<KidsListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final childrenAsync = ref.watch(teacherChildrenProvider);
 
     return Scaffold(
       body: childrenAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text(l10n.errorMessage(e.toString()))),
         data: (children) {
           final filtered = _search.isEmpty
               ? children
@@ -45,15 +47,15 @@ class _KidsListScreenState extends ConsumerState<KidsListScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${children.length} Kids Enrolled',
+                    Text(l10n.kidsEnrolled(children.length),
                         style: AppTextStyles.headline2)
                         .animate()
                         .fadeIn(duration: 400.ms),
                     const SizedBox(height: 14),
                     TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Search kids...',
-                        prefixIcon: Icon(Icons.search_rounded),
+                      decoration: InputDecoration(
+                        hintText: l10n.searchKids,
+                        prefixIcon: const Icon(Icons.search_rounded),
                       ),
                       onChanged: (v) => setState(() => _search = v),
                     ).animate(delay: 100.ms).fadeIn(duration: 400.ms),
@@ -71,8 +73,8 @@ class _KidsListScreenState extends ConsumerState<KidsListScreen> {
                             const SizedBox(height: 12),
                             Text(
                                 _search.isEmpty
-                                    ? 'No kids enrolled yet'
-                                    : 'No results for "$_search"',
+                                    ? l10n.noKidsEnrolledYet
+                                    : l10n.noResultsFor(_search),
                                 style: AppTextStyles.body),
                           ],
                         ),
@@ -96,7 +98,7 @@ class _KidsListScreenState extends ConsumerState<KidsListScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go(AppRoutes.teacherAddKid),
         icon: const Icon(Icons.person_add_rounded),
-        label: const Text('Add Kid'),
+        label: Text(l10n.addKid),
       ),
     );
   }
@@ -126,7 +128,7 @@ class _KidCard extends StatelessWidget {
               children: [
                 Text(child.fullName, style: AppTextStyles.titleMedium),
                 const SizedBox(height: 2),
-                Text('Age: ${Formatter.age(child.dateOfBirth)}',
+                Text(AppLocalizations.of(context)!.ageLabel(Formatter.age(child.dateOfBirth)),
                     style: AppTextStyles.bodySmall),
                 if (child.classGroup != null) ...[
                   const SizedBox(height: 4),

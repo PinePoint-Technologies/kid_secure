@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatter.dart';
 import '../../../shared/models/sick_leave_model.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../l10n/app_localizations.dart';
 import '../providers/parent_provider.dart';
 
 class SickLeaveScreen extends ConsumerWidget {
@@ -15,12 +16,13 @@ class SickLeaveScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final sickLeaveAsync = ref.watch(parentSickLeaveProvider);
 
     return Scaffold(
       body: sickLeaveAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text(l10n.errorMessage(e.toString()))),
         data: (leaves) => leaves.isEmpty
             ? Center(
                 child: Column(
@@ -29,17 +31,10 @@ class SickLeaveScreen extends ConsumerWidget {
                     const Icon(Icons.local_hospital_outlined,
                         size: 80, color: AppColors.textHint),
                     const SizedBox(height: 16),
-                    Text('No sick leave logged', style: AppTextStyles.headline3),
+                    Text(l10n.noSickLeaveLogged, style: AppTextStyles.headline3),
                     const SizedBox(height: 8),
-                    Text(
-                        'Tap the button below to log a sick day',
-                        style: AppTextStyles.body),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () => context.go(AppRoutes.parentLogSickLeave),
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('Log Sick Leave'),
-                    ),
+                    Text(l10n.tapToLogSickDay, style: AppTextStyles.body),
+                    const SizedBox(height: 24)
                   ],
                 ),
               )
@@ -48,7 +43,7 @@ class SickLeaveScreen extends ConsumerWidget {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                      child: Text('Sick Leave History',
+                      child: Text(l10n.sickLeaveHistory,
                               style: AppTextStyles.headline2)
                           .animate()
                           .fadeIn(duration: 400.ms),
@@ -73,7 +68,7 @@ class SickLeaveScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go(AppRoutes.parentLogSickLeave),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Log Sick Leave'),
+        label: Text(l10n.logSickLeave),
         backgroundColor: AppColors.superAdmin,
       ),
     );
@@ -86,10 +81,11 @@ class _SickLeaveCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final (statusColor, statusText) = switch (leave.status) {
-      SickLeaveStatus.pending => (AppColors.warning, 'Pending'),
-      SickLeaveStatus.approved => (AppColors.success, 'Approved'),
-      SickLeaveStatus.rejected => (AppColors.error, 'Rejected'),
+      SickLeaveStatus.pending => (AppColors.warning, l10n.pending),
+      SickLeaveStatus.approved => (AppColors.success, l10n.approved),
+      SickLeaveStatus.rejected => (AppColors.error, l10n.rejected),
     };
 
     return AppCard(
@@ -142,19 +138,19 @@ class _SickLeaveCard extends StatelessWidget {
           Text(leave.reason, style: AppTextStyles.bodyMedium),
           if (leave.symptoms != null) ...[
             const SizedBox(height: 4),
-            Text('Symptoms: ${leave.symptoms}',
+            Text(l10n.symptoms(leave.symptoms!),
                 style: AppTextStyles.bodySmall),
           ],
           if (leave.attachmentUrls.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-                '${leave.attachmentUrls.length} attachment${leave.attachmentUrls.length == 1 ? '' : 's'}',
+                l10n.attachmentCount(leave.attachmentUrls.length),
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.primary,
                 )),
           ],
           const SizedBox(height: 8),
-          Text('Logged ${Formatter.relativeTime(leave.createdAt)}',
+          Text(l10n.loggedTime(Formatter.relativeTime(leave.createdAt)),
               style: AppTextStyles.caption),
         ],
       ),

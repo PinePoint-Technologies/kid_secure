@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../providers/settings_provider.dart';
 
@@ -25,10 +26,11 @@ class _LanguageScreenState extends ConsumerState<LanguageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.pop()),
-        title: const Text('Language'),
+        title: Text(l10n.language),
       ),
       body: Column(
         children: [
@@ -84,45 +86,17 @@ class _LanguageScreenState extends ConsumerState<LanguageScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.info.withAlpha(20),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.info.withAlpha(80)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline_rounded,
-                          color: AppColors.info, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Full localisation support is coming soon. '
-                          'English content will be shown in the meantime.',
-                          style: AppTextStyles.caption
-                              .copyWith(color: AppColors.info),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                FilledButton(
-                  onPressed: () async {
-                    await ref
-                        .read(settingsProvider.notifier)
-                        .setLanguage(_selected);
-                    if (context.mounted) context.pop();
-                  },
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(52),
-                  ),
-                  child: const Text('Apply Language'),
-                ),
-              ],
+            child: FilledButton(
+              onPressed: () async {
+                await ref
+                    .read(settingsProvider.notifier)
+                    .setLanguage(_selected);
+                if (context.mounted) context.pop();
+              },
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+              ),
+              child: Text(l10n.applyLanguage),
             ),
           ),
         ],

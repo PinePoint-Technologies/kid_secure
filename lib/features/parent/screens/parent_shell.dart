@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/formatter.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class ParentShell extends ConsumerStatefulWidget {
@@ -17,16 +18,18 @@ class ParentShell extends ConsumerStatefulWidget {
 class _ParentShellState extends ConsumerState<ParentShell> {
   int _currentIndex = 0;
 
-  static const _tabs = [
-    (AppRoutes.parent, Icons.home_rounded, 'Home'),
-    (AppRoutes.parentSignInOut, Icons.login_rounded, 'Sign In/Out'),
-    (AppRoutes.parentGuardians, Icons.people_rounded, 'Guardians'),
-    (AppRoutes.parentSickLeave, Icons.local_hospital_rounded, 'Sick Leave'),
+  static const _tabRoutes = [
+    (AppRoutes.parent, Icons.home_rounded),
+    (AppRoutes.parentSignInOut, Icons.login_rounded),
+    (AppRoutes.parentGuardians, Icons.people_rounded),
+    (AppRoutes.parentSickLeave, Icons.local_hospital_rounded),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(currentUserProvider).valueOrNull;
+    final tabLabels = [l10n.navHome, l10n.navSignInOut, l10n.navGuardians, l10n.navSickLeave];
 
     return Scaffold(
       appBar: AppBar(
@@ -34,7 +37,7 @@ class _ParentShellState extends ConsumerState<ParentShell> {
           children: [
             Image.asset('assets/images/logo2.png', width: 32, height: 32),
             const SizedBox(width: 10),
-            const Text('KidSecure'),
+            Text(l10n.appName),
           ],
         ),
         actions: [
@@ -77,14 +80,15 @@ class _ParentShellState extends ConsumerState<ParentShell> {
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) {
           setState(() => _currentIndex = i);
-          context.go(_tabs[i].$1);
+          context.go(_tabRoutes[i].$1);
         },
-        destinations: _tabs
-            .map((t) => NavigationDestination(
-                  icon: Icon(t.$2),
-                  label: t.$3,
-                ))
-            .toList(),
+        destinations: List.generate(
+          _tabRoutes.length,
+          (i) => NavigationDestination(
+            icon: Icon(_tabRoutes[i].$2),
+            label: tabLabels[i],
+          ),
+        ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/models/sick_leave_model.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -50,9 +51,10 @@ class _LogSickLeaveScreenState extends ConsumerState<LogSickLeaveScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedChildId == null) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a child'),
+        SnackBar(
+          content: Text(l10n.selectChildFirst),
           backgroundColor: AppColors.error,
         ),
       );
@@ -82,14 +84,15 @@ class _LogSickLeaveScreenState extends ConsumerState<LogSickLeaveScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final formState = ref.watch(sickLeaveFormProvider);
     final childrenAsync = ref.watch(parentChildrenProvider);
 
     ref.listen(sickLeaveFormProvider, (_, next) {
       if (next.isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sick leave logged! Teacher will be notified.'),
+          SnackBar(
+            content: Text(l10n.sickLeaveLoggedNotification),
             backgroundColor: AppColors.success,
           ),
         );
@@ -107,7 +110,7 @@ class _LogSickLeaveScreenState extends ConsumerState<LogSickLeaveScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Log Sick Leave'),
+        title: Text(l10n.logSickLeave),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(AppRoutes.parentSickLeave),
@@ -126,10 +129,10 @@ class _LogSickLeaveScreenState extends ConsumerState<LogSickLeaveScreen> {
                 error: (_, __) => const SizedBox(),
                 data: (children) => DropdownButtonFormField<String>(
                   initialValue: _selectedChildId,
-                  hint: const Text('Select child'),
-                  decoration: const InputDecoration(
-                    labelText: 'Child',
-                    prefixIcon: Icon(Icons.child_care_rounded),
+                  hint: Text(l10n.selectChild),
+                  decoration: InputDecoration(
+                    labelText: l10n.child,
+                    prefixIcon: const Icon(Icons.child_care_rounded),
                   ),
                   items: children
                       .map((c) => DropdownMenuItem(
@@ -144,7 +147,7 @@ class _LogSickLeaveScreenState extends ConsumerState<LogSickLeaveScreen> {
                       _selectedChildName = child.fullName;
                     });
                   },
-                  validator: (v) => v == null ? 'Select a child' : null,
+                  validator: (v) => v == null ? l10n.selectChildFirst : null,
                 ).animate().fadeIn(duration: 400.ms),
               ),
               const SizedBox(height: 16),
@@ -153,7 +156,7 @@ class _LogSickLeaveScreenState extends ConsumerState<LogSickLeaveScreen> {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.event_rounded,
                     color: AppColors.textHint),
-                title: Text('Start Date', style: AppTextStyles.label),
+                title: Text(l10n.startDate, style: AppTextStyles.label),
                 subtitle: Text(
                   '${_startDate.day}/${_startDate.month}/${_startDate.year}',
                   style: AppTextStyles.bodyMedium,
@@ -176,7 +179,7 @@ class _LogSickLeaveScreenState extends ConsumerState<LogSickLeaveScreen> {
                 contentPadding: EdgeInsets.zero,
                 value: _multiDay,
                 onChanged: (v) => setState(() => _multiDay = v),
-                title: const Text('Multiple days'),
+                title: Text(l10n.multipleDays),
                 secondary: const Icon(Icons.date_range_rounded,
                     color: AppColors.textHint),
               ).animate(delay: 100.ms).fadeIn(duration: 400.ms),
@@ -185,11 +188,11 @@ class _LogSickLeaveScreenState extends ConsumerState<LogSickLeaveScreen> {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.event_available_rounded,
                       color: AppColors.textHint),
-                  title: Text('End Date', style: AppTextStyles.label),
+                  title: Text(l10n.endDate, style: AppTextStyles.label),
                   subtitle: Text(
                     _endDate != null
                         ? '${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
-                        : 'Not set',
+                        : l10n.notSet,
                     style: AppTextStyles.bodyMedium,
                   ),
                   trailing: const Icon(Icons.edit_calendar_rounded,
@@ -209,32 +212,32 @@ class _LogSickLeaveScreenState extends ConsumerState<LogSickLeaveScreen> {
               TextFormField(
                 controller: _reasonCtrl,
                 maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Reason for absence',
-                  prefixIcon: Icon(Icons.edit_note_rounded),
+                decoration: InputDecoration(
+                  labelText: l10n.reasonForAbsence,
+                  prefixIcon: const Icon(Icons.edit_note_rounded),
                   alignLabelWithHint: true,
                 ),
                 validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Reason is required'
+                    ? l10n.reasonRequired
                     : null,
               ).animate(delay: 150.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 14),
               TextFormField(
                 controller: _symptomsCtrl,
                 maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Symptoms (optional)',
-                  prefixIcon: Icon(Icons.sick_rounded),
+                decoration: InputDecoration(
+                  labelText: l10n.symptomsOptional,
+                  prefixIcon: const Icon(Icons.sick_rounded),
                   alignLabelWithHint: true,
                 ),
               ).animate(delay: 180.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 20),
               // Attachments
-              Text('Attachments', style: AppTextStyles.title)
+              Text(l10n.attachments, style: AppTextStyles.title)
                   .animate(delay: 200.ms)
                   .fadeIn(duration: 400.ms),
               const SizedBox(height: 6),
-              Text("Attach doctor's notes (PDF, JPG, PNG)",
+              Text(l10n.attachDoctorNotes,
                       style: AppTextStyles.bodySmall)
                   .animate(delay: 220.ms)
                   .fadeIn(duration: 400.ms),
@@ -267,13 +270,13 @@ class _LogSickLeaveScreenState extends ConsumerState<LogSickLeaveScreen> {
               OutlinedButton.icon(
                 onPressed: _pickFile,
                 icon: const Icon(Icons.add_rounded),
-                label: const Text('Add Attachment'),
+                label: Text(l10n.addAttachment),
                 style: OutlinedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 48)),
               ).animate(delay: 240.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 32),
               GradientButton(
-                label: 'Submit Sick Leave',
+                label: l10n.submitSickLeave,
                 onPressed: _save,
                 isLoading: formState.isLoading,
                 gradient: AppColors.superAdminGradient,

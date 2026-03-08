@@ -1,14 +1,44 @@
+import 'dart:async';
+
 import 'package:app_links/app_links.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/providers/theme_provider.dart';
+import 'features/settings/providers/settings_provider.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
+
+/// Wraps a [LocalizationsDelegate] so it claims to support every locale,
+/// falling back to [_fallback] (English by default) for locales the inner
+/// delegate does not handle.  This prevents the "locale X is not supported"
+/// warning Flutter emits when Material/Cupertino delegates don't cover every
+/// locale declared in [AppLocalizations.supportedLocales].
+class _FallbackDelegate<T> extends LocalizationsDelegate<T> {
+  final LocalizationsDelegate<T> _inner;
+  final Locale _fallback;
+
+  const _FallbackDelegate(this._inner,
+      {Locale fallback = const Locale('en')})
+      : _fallback = fallback;
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<T> load(Locale locale) =>
+      _inner.load(_inner.isSupported(locale) ? locale : _fallback);
+
+  @override
+  bool shouldReload(_FallbackDelegate<T> old) => false;
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,6 +127,9 @@ class _KidSecureAppState extends ConsumerState<KidSecureApp> {
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeProvider);
+    final languageCode = ref.watch(
+      settingsProvider.select((s) => s.languageCode),
+    );
 
     return MaterialApp.router(
       title: 'KidSecure',
@@ -105,6 +138,14 @@ class _KidSecureAppState extends ConsumerState<KidSecureApp> {
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       routerConfig: router,
+      locale: Locale(languageCode),
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        _FallbackDelegate<MaterialLocalizations>(GlobalMaterialLocalizations.delegate),
+        GlobalWidgetsLocalizations.delegate,
+        _FallbackDelegate<CupertinoLocalizations>(GlobalCupertinoLocalizations.delegate),
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
 }

@@ -7,6 +7,7 @@ import '../../../core/utils/formatter.dart';
 import '../../../shared/models/sick_leave_model.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../l10n/app_localizations.dart';
 import '../providers/teacher_provider.dart';
 
 class TeacherSickLeaveScreen extends ConsumerWidget {
@@ -14,17 +15,17 @@ class TeacherSickLeaveScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final sickLeaveAsync = ref.watch(teacherSickLeaveProvider);
 
     return sickLeaveAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(l10n.errorMessage(e.toString()))),
       data: (leaves) {
         final pending =
             leaves.where((l) => l.status == SickLeaveStatus.pending).toList();
         final approved =
             leaves.where((l) => l.status == SickLeaveStatus.approved).toList();
-
         if (leaves.isEmpty) {
           return Center(
             child: Column(
@@ -33,10 +34,10 @@ class TeacherSickLeaveScreen extends ConsumerWidget {
                 const Icon(Icons.local_hospital_outlined,
                     size: 80, color: AppColors.textHint),
                 const SizedBox(height: 16),
-                Text('No sick leave submitted',
+                Text(l10n.noSickLeaveSubmitted,
                     style: AppTextStyles.headline3),
                 const SizedBox(height: 8),
-                Text('Parents can log sick leave from their app.',
+                Text(l10n.parentsCanLog,
                     style: AppTextStyles.body
                         .copyWith(color: AppColors.textSecondary)),
               ],
@@ -49,7 +50,7 @@ class TeacherSickLeaveScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                child: Text('Sick Leave', style: AppTextStyles.headline2)
+                child: Text(l10n.navSickLeave, style: AppTextStyles.headline2)
                     .animate()
                     .fadeIn(duration: 400.ms),
               ),
@@ -72,7 +73,7 @@ class TeacherSickLeaveScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Pending (${pending.length})',
+                        l10n.pendingCount(pending.length),
                         style: AppTextStyles.title
                             .copyWith(color: AppColors.warning),
                       ),
@@ -122,7 +123,7 @@ class TeacherSickLeaveScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Approved (${approved.length})',
+                        l10n.approvedCount(approved.length),
                         style: AppTextStyles.title
                             .copyWith(color: AppColors.success),
                       ),
@@ -201,7 +202,7 @@ class _PendingSickLeaveCard extends StatelessWidget {
                   color: AppColors.warning.withAlpha(26),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('Pending',
+                child: Text(AppLocalizations.of(context)!.pending,
                     style: AppTextStyles.caption.copyWith(
                       color: AppColors.warning,
                       fontWeight: FontWeight.w700,
@@ -213,12 +214,12 @@ class _PendingSickLeaveCard extends StatelessWidget {
           Text(leave.reason, style: AppTextStyles.bodySmall),
           if (leave.symptoms != null) ...[
             const SizedBox(height: 4),
-            Text('Symptoms: ${leave.symptoms}',
+            Text(AppLocalizations.of(context)!.symptoms(leave.symptoms!),
                 style: AppTextStyles.caption
                     .copyWith(color: AppColors.textSecondary)),
           ],
           const SizedBox(height: 4),
-          Text('Submitted ${Formatter.relativeTime(leave.createdAt)}',
+          Text(AppLocalizations.of(context)!.submittedTime(Formatter.relativeTime(leave.createdAt)),
               style:
                   AppTextStyles.caption.copyWith(color: AppColors.textHint)),
           const SizedBox(height: 12),
@@ -231,7 +232,7 @@ class _PendingSickLeaveCard extends StatelessWidget {
                 minimumSize: const Size(double.infinity, 40),
               ),
               icon: const Icon(Icons.check_rounded, size: 18),
-              label: const Text('Approve'),
+              label: Text(AppLocalizations.of(context)!.approve),
             ),
           ),
         ],
@@ -284,7 +285,7 @@ class _ApprovedSickLeaveCard extends StatelessWidget {
               color: AppColors.success.withAlpha(26),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text('Approved',
+            child: Text(AppLocalizations.of(context)!.approved,
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.success,
                   fontWeight: FontWeight.w700,

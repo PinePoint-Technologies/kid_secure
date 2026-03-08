@@ -7,6 +7,7 @@ import '../../core/providers/theme_provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/models/user_model.dart';
 import '../auth/providers/auth_provider.dart';
 
@@ -87,7 +88,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     .fadeIn(duration: 400.ms),
                 const SizedBox(height: 36),
                 Text(
-                  'Keeping little ones safe',
+                  AppLocalizations.of(context)!.splashTagline,
                   style: AppTextStyles.body.copyWith(
                     color: Colors.white.withAlpha(204),
                     fontSize: 17,

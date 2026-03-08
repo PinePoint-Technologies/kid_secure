@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Registration is now invite-only.
 /// This screen informs users that they need an invite link from their school.
@@ -12,9 +13,10 @@ class RegisterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Account'),
+        title: Text(l10n.createAccount),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(AppRoutes.login),
@@ -40,15 +42,13 @@ class RegisterScreen extends StatelessWidget {
               ).animate().scale(duration: 400.ms),
               const SizedBox(height: 28),
               Text(
-                'Invitation Required',
+                l10n.invitationRequired,
                 style: AppTextStyles.headline2,
                 textAlign: TextAlign.center,
               ).animate(delay: 100.ms).fadeIn(),
               const SizedBox(height: 12),
               Text(
-                'KidSecure uses a secure invite system.\n\n'
-                'Ask your school administrator for a teacher invite link, '
-                'or ask your teacher for a parent invite link.',
+                l10n.inviteSystemExplanation,
                 style: AppTextStyles.body.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -64,20 +64,11 @@ class RegisterScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _Step(
-                      number: '1',
-                      text: 'Receive an invite link from your school',
-                    ),
+                    _Step(number: '1', text: l10n.inviteStep1),
                     const SizedBox(height: 12),
-                    _Step(
-                      number: '2',
-                      text: 'Tap the link to open KidSecure',
-                    ),
+                    _Step(number: '2', text: l10n.inviteStep2),
                     const SizedBox(height: 12),
-                    _Step(
-                      number: '3',
-                      text: 'Complete registration — your role is pre-assigned',
-                    ),
+                    _Step(number: '3', text: l10n.inviteStep3),
                   ],
                 ),
               ).animate(delay: 300.ms).fadeIn().slideY(begin: 0.1),
@@ -85,7 +76,7 @@ class RegisterScreen extends StatelessWidget {
               TextButton.icon(
                 onPressed: () => context.go(AppRoutes.login),
                 icon: const Icon(Icons.arrow_back_rounded),
-                label: const Text('Back to Login'),
+                label: Text(l10n.backToLogin),
               ).animate(delay: 400.ms).fadeIn(),
             ],
           ),

@@ -9,6 +9,7 @@ import '../../../shared/models/sick_leave_model.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../l10n/app_localizations.dart';
 import '../providers/teacher_provider.dart';
 
 class AttendanceOverviewScreen extends ConsumerWidget {
@@ -46,7 +47,7 @@ class AttendanceOverviewScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Today's Attendance", style: AppTextStyles.headline2)
+                Text(AppLocalizations.of(context)!.todaysAttendance, style: AppTextStyles.headline2)
                     .animate()
                     .fadeIn(duration: 400.ms),
                 Text(Formatter.dateTime(DateTime.now()),
@@ -218,7 +219,7 @@ class AttendanceOverviewScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Pending Sick Leave', style: AppTextStyles.title),
+                        Text(AppLocalizations.of(context)!.navSickLeave, style: AppTextStyles.title),
                         const SizedBox(height: 12),
                         ...leaves.asMap().entries.map((e) {
                           final leave = e.value;
@@ -279,7 +280,7 @@ class _SickLeaveCard extends StatelessWidget {
           Text(leave.reason, style: AppTextStyles.bodySmall),
           if (leave.symptoms != null) ...[
             const SizedBox(height: 4),
-            Text('Symptoms: ${leave.symptoms}',
+            Text(AppLocalizations.of(context)!.symptoms(leave.symptoms!),
                 style: AppTextStyles.caption),
           ],
           const SizedBox(height: 12),
@@ -292,7 +293,7 @@ class _SickLeaveCard extends StatelessWidget {
                 minimumSize: const Size(double.infinity, 38),
               ),
               icon: const Icon(Icons.check_rounded, size: 18),
-              label: const Text('Approve'),
+              label: Text(AppLocalizations.of(context)!.approve),
             ),
           ),
         ],

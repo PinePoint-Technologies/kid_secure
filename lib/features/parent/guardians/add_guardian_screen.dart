@@ -11,6 +11,7 @@ import '../../../shared/models/guardian_model.dart';
 import '../../../shared/utils/pin_hasher.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../l10n/app_localizations.dart';
 import '../providers/parent_provider.dart';
 
 class AddGuardianScreen extends ConsumerStatefulWidget {
@@ -47,8 +48,8 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedChildId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a child.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.selectChildFirst),
           backgroundColor: AppColors.error,
         ),
       );
@@ -81,14 +82,15 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final formState = ref.watch(guardianFormProvider);
     final childrenAsync = ref.watch(parentChildrenProvider);
 
     ref.listen(guardianFormProvider, (_, next) {
       if (next.isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Guardian added successfully!'),
+          SnackBar(
+            content: Text(l10n.guardianAddedSuccess),
             backgroundColor: AppColors.success,
           ),
         );
@@ -106,7 +108,7 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Guardian'),
+        title: Text(l10n.addGuardian),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(AppRoutes.parentGuardians),
@@ -120,7 +122,7 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Select child
-              Text('For which child?', style: AppTextStyles.title)
+              Text(l10n.forWhichChild, style: AppTextStyles.title)
                   .animate()
                   .fadeIn(duration: 400.ms),
               const SizedBox(height: 10),
@@ -129,7 +131,7 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
                 error: (_, __) => const SizedBox(),
                 data: (children) => DropdownButtonFormField<String>(
                   initialValue: _selectedChildId,
-                  hint: const Text('Select child'),
+                  hint: Text(l10n.selectAChild),
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.child_care_rounded),
                   ),
@@ -140,11 +142,11 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
                           ))
                       .toList(),
                   onChanged: (v) => setState(() => _selectedChildId = v),
-                  validator: (v) => v == null ? 'Select a child' : null,
+                  validator: (v) => v == null ? l10n.selectAChild : null,
                 ),
               ).animate(delay: 50.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 24),
-              Text('Guardian Details', style: AppTextStyles.title)
+              Text(l10n.guardianDetails, style: AppTextStyles.title)
                   .animate(delay: 100.ms)
                   .fadeIn(duration: 400.ms),
               const SizedBox(height: 12),
@@ -154,12 +156,12 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
                     child: TextFormField(
                       controller: _firstCtrl,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'First Name',
-                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      decoration: InputDecoration(
+                        labelText: l10n.firstName,
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
                       ),
                       validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Required'
+                          ? l10n.required
                           : null,
                     ).animate(delay: 120.ms).fadeIn(duration: 400.ms),
                   ),
@@ -168,12 +170,12 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
                     child: TextFormField(
                       controller: _lastCtrl,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Last Name',
-                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      decoration: InputDecoration(
+                        labelText: l10n.lastName,
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
                       ),
                       validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Required'
+                          ? l10n.required
                           : null,
                     ).animate(delay: 140.ms).fadeIn(duration: 400.ms),
                   ),
@@ -183,46 +185,46 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
               TextFormField(
                 controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  prefixIcon: Icon(Icons.phone_outlined),
+                decoration: InputDecoration(
+                  labelText: l10n.phoneNumber,
+                  prefixIcon: const Icon(Icons.phone_outlined),
                 ),
                 validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Phone is required'
+                    ? l10n.phoneRequired
                     : null,
               ).animate(delay: 160.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 14),
               TextFormField(
                 controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email (optional)',
-                  prefixIcon: Icon(Icons.email_outlined),
+                decoration: InputDecoration(
+                  labelText: l10n.emailOptional,
+                  prefixIcon: const Icon(Icons.email_outlined),
                 ),
               ).animate(delay: 180.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 14),
               TextFormField(
                 controller: _idCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'ID Number (optional)',
-                  prefixIcon: Icon(Icons.badge_outlined),
+                decoration: InputDecoration(
+                  labelText: l10n.idNumberOptional,
+                  prefixIcon: const Icon(Icons.badge_outlined),
                 ),
               ).animate(delay: 200.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 20),
-              Text('Guardian PIN', style: AppTextStyles.title)
+              Text(l10n.guardianPin, style: AppTextStyles.title)
                   .animate(delay: 210.ms)
                   .fadeIn(duration: 400.ms),
               const SizedBox(height: 4),
               Text(
-                'The guardian will use this PIN to sign a child in or out.',
+                l10n.guardianPinDescription,
                 style: AppTextStyles.bodySmall,
               ).animate(delay: 215.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 12),
               FormField<String>(
                 validator: (_) {
                   final v = _pinCtrl.text.trim();
-                  if (v.isEmpty) return 'PIN is required';
-                  if (v.length < 4) return 'PIN must be at least 4 digits';
+                  if (v.isEmpty) return l10n.pinRequired;
+                  if (v.length < 4) return l10n.pinMinFourDigits;
                   return null;
                 },
                 builder: (field) => Column(
@@ -271,9 +273,9 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
               const SizedBox(height: 14),
               DropdownButtonFormField<GuardianRelationship>(
                 initialValue: _relationship,
-                decoration: const InputDecoration(
-                  labelText: 'Relationship',
-                  prefixIcon: Icon(Icons.family_restroom_rounded),
+                decoration: InputDecoration(
+                  labelText: l10n.relationship,
+                  prefixIcon: const Icon(Icons.family_restroom_rounded),
                 ),
                 items: GuardianRelationship.values
                     .map((r) => DropdownMenuItem(
@@ -285,14 +287,14 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
                     setState(() => _relationship = v ?? GuardianRelationship.other),
               ).animate(delay: 220.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 24),
-              Text('Permissions', style: AppTextStyles.title)
+              Text(l10n.permissions, style: AppTextStyles.title)
                   .animate(delay: 260.ms)
                   .fadeIn(duration: 400.ms),
               const SizedBox(height: 8),
               SwitchListTile(
                 value: _canSignIn,
                 onChanged: (v) => setState(() => _canSignIn = v),
-                title: const Text('Can sign child in'),
+                title: Text(l10n.canSignChildIn),
                 secondary:
                     const Icon(Icons.login_rounded, color: AppColors.success),
                 activeThumbColor: AppColors.success,
@@ -300,14 +302,14 @@ class _AddGuardianScreenState extends ConsumerState<AddGuardianScreen> {
               SwitchListTile(
                 value: _canSignOut,
                 onChanged: (v) => setState(() => _canSignOut = v),
-                title: const Text('Can sign child out'),
+                title: Text(l10n.canSignChildOut),
                 secondary:
                     const Icon(Icons.logout_rounded, color: AppColors.error),
                 activeThumbColor: AppColors.error,
               ).animate(delay: 300.ms).fadeIn(duration: 400.ms),
               const SizedBox(height: 32),
               GradientButton(
-                label: 'Add Guardian',
+                label: l10n.addGuardian,
                 onPressed: _save,
                 isLoading: formState.isLoading,
                 gradient: AppColors.parentGradient,

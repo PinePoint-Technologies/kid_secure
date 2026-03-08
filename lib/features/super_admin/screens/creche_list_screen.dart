@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/models/creche_model.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../providers/super_admin_provider.dart';
@@ -14,12 +15,13 @@ class CrecheListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final crechesAsync = ref.watch(allCrechesProvider);
 
     return Scaffold(
       body: crechesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text(l10n.errorMessage(e.toString()))),
         data: (creches) => creches.isEmpty
             ? _EmptyState(onAdd: () => context.go(AppRoutes.superAdminCrecheNew))
             : CustomScrollView(
@@ -30,10 +32,10 @@ class CrecheListScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Manage Creches', style: AppTextStyles.headline2),
+                          Text(l10n.manageCreches, style: AppTextStyles.headline2),
                           const SizedBox(height: 4),
                           Text(
-                            '${creches.length} school${creches.length == 1 ? '' : 's'} registered',
+                            l10n.schoolsRegistered(creches.length),
                             style: AppTextStyles.body,
                           ),
                           const SizedBox(height: 16),
@@ -41,14 +43,14 @@ class CrecheListScreen extends ConsumerWidget {
                           Row(
                             children: [
                               _StatCard(
-                                label: 'Total Schools',
+                                label: l10n.totalSchools,
                                 value: '${creches.length}',
                                 icon: Icons.school_rounded,
                                 gradient: AppColors.primaryGradient,
                               ),
                               const SizedBox(width: 12),
                               _StatCard(
-                                label: 'Capacity',
+                                label: l10n.capacity,
                                 value:
                                     '${creches.fold(0, (s, c) => s + c.capacity)}',
                                 icon: Icons.people_rounded,
@@ -78,7 +80,7 @@ class CrecheListScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go(AppRoutes.superAdminCrecheNew),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Creche'),
+        label: Text(AppLocalizations.of(context)!.manageCreches),
       ),
     );
   }
@@ -110,16 +112,20 @@ class _StatCard extends StatelessWidget {
           children: [
             Icon(icon, color: Colors.white, size: 28),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(value,
-                    style: AppTextStyles.headline3
-                        .copyWith(color: Colors.white)),
-                Text(label,
-                    style: AppTextStyles.caption
-                        .copyWith(color: Colors.white70)),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(value,
+                      style: AppTextStyles.headline3
+                          .copyWith(color: Colors.white),
+                      overflow: TextOverflow.ellipsis),
+                  Text(label,
+                      style: AppTextStyles.caption
+                          .copyWith(color: Colors.white70),
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
             ),
           ],
         ),
@@ -184,7 +190,7 @@ class _CrecheCard extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.people_alt_rounded),
                 color: AppColors.primary,
-                tooltip: 'Manage Teachers',
+                tooltip: AppLocalizations.of(context)!.manageTeachers,
                 onPressed: () => context.go(
                   AppRoutes.superAdminTeacherAssign
                       .replaceFirst(':crecheId', creche.id),
@@ -228,16 +234,16 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.school_outlined, size: 80, color: AppColors.primary),
           const SizedBox(height: 16),
-          Text('No creches yet', style: AppTextStyles.headline3),
+          Text(l10n.manageCreches, style: AppTextStyles.headline3),
           const SizedBox(height: 8),
-          Text('Add your first school to get started',
-              style: AppTextStyles.body),
+          Text(l10n.addYourFirstSchool, style: AppTextStyles.body),
           const SizedBox(height: 24)
         ],
       ),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../l10n/app_localizations.dart';
 import '../providers/super_admin_provider.dart';
 
 class SuperAdminDashboardScreen extends ConsumerWidget {
@@ -12,6 +13,7 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final statsAsync = ref.watch(adminStatsProvider);
 
     return Scaffold(
@@ -20,11 +22,11 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Overview', style: AppTextStyles.headline2)
+            Text(l10n.overview, style: AppTextStyles.headline2)
                 .animate()
                 .fadeIn(duration: 350.ms),
             const SizedBox(height: 4),
-            Text('Live counts across all schools',
+            Text(l10n.liveCountsAllSchools,
                 style: AppTextStyles.body.copyWith(
                   color: AppColors.textSecondary,
                 )).animate().fadeIn(duration: 350.ms),
@@ -36,13 +38,13 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
                   child: CircularProgressIndicator(),
                 ),
               ),
-              error: (e, _) => Center(child: Text('Error: $e')),
+              error: (e, _) => Center(child: Text(l10n.errorMessage(e.toString()))),
               data: (stats) => Column(
                 children: [
                   Row(
                     children: [
                       _StatCard(
-                        label: 'Schools',
+                        label: l10n.schools,
                         value: '${stats.crecheCount}',
                         icon: Icons.school_rounded,
                         gradient: AppColors.superAdminGradient,
@@ -50,7 +52,7 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 12),
                       _StatCard(
-                        label: 'Teachers',
+                        label: l10n.teachers,
                         value: '${stats.teacherCount}',
                         icon: Icons.person_rounded,
                         gradient: AppColors.teacherGradient,
@@ -61,7 +63,7 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
                   Row(
                     children: [
                       _StatCard(
-                        label: 'Kids',
+                        label: l10n.kids,
                         value: '${stats.kidCount}',
                         icon: Icons.child_care_rounded,
                         gradient: AppColors.accentGradient,
@@ -69,7 +71,7 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 12),
                       _StatCard(
-                        label: 'Parents',
+                        label: l10n.parents,
                         value: '${stats.parentCount}',
                         icon: Icons.family_restroom_rounded,
                         gradient: AppColors.parentGradient,
@@ -81,7 +83,7 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
                   Row(
                     children: [
                       _StatCard(
-                        label: 'Guardians',
+                        label: l10n.guardians,
                         value: '${stats.guardianCount}',
                         icon: Icons.shield_rounded,
                         gradient: AppColors.primaryGradient,
@@ -94,13 +96,13 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 32),
-            Text('Quick Actions', style: AppTextStyles.title)
+            Text(l10n.quickActions, style: AppTextStyles.title)
                 .animate(delay: 300.ms)
                 .fadeIn(duration: 350.ms),
             const SizedBox(height: 14),
             _QuickAction(
               icon: Icons.school_rounded,
-              label: 'Manage Crèches',
+              label: l10n.manageCreches,
               subtitle: 'Add, edit or deactivate schools',
               gradient: AppColors.superAdminGradient,
               onTap: () => context.go(AppRoutes.superAdminCreches),
@@ -108,7 +110,7 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             _QuickAction(
               icon: Icons.family_restroom_rounded,
-              label: 'Parent Accounts',
+              label: l10n.navParents,
               subtitle: 'View and manage all parents',
               gradient: AppColors.parentGradient,
               onTap: () => context.go(AppRoutes.superAdminParents),
@@ -116,7 +118,7 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             _QuickAction(
               icon: Icons.child_care_rounded,
-              label: 'All Kids',
+              label: l10n.navKids,
               subtitle: 'Browse children across all schools',
               gradient: AppColors.accentGradient,
               onTap: () => context.go(AppRoutes.superAdminKids),
@@ -124,7 +126,7 @@ class SuperAdminDashboardScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             _QuickAction(
               icon: Icons.bar_chart_rounded,
-              label: 'Reports',
+              label: l10n.navReports,
               subtitle: 'Attendance & sick-leave across all schools',
               gradient: AppColors.primaryGradient,
               onTap: () => context.go(AppRoutes.superAdminReports),
@@ -166,16 +168,20 @@ class _StatCard extends StatelessWidget {
             children: [
               Icon(icon, color: Colors.white, size: 28),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(value,
-                      style: AppTextStyles.headline3
-                          .copyWith(color: Colors.white)),
-                  Text(label,
-                      style: AppTextStyles.caption
-                          .copyWith(color: Colors.white70)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(value,
+                        style: AppTextStyles.headline3
+                            .copyWith(color: Colors.white),
+                        overflow: TextOverflow.ellipsis),
+                    Text(label,
+                        style: AppTextStyles.caption
+                            .copyWith(color: Colors.white70),
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
             ],
           ),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../providers/auth_provider.dart';
 
@@ -47,6 +48,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final auth = ref.watch(authNotifierProvider);
     final isLoading = auth is AuthLoading;
 
@@ -66,7 +68,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('First-time Setup'),
+        title: Text(l10n.setupScreenTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(AppRoutes.login),
@@ -97,13 +99,13 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Create Super Admin',
+                            Text(l10n.createSuperAdmin,
                                 style: AppTextStyles.bodyMedium.copyWith(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.w700)),
                             const SizedBox(height: 2),
                             Text(
-                              'This screen only appears once. The super admin can manage all creches, teachers, and settings.',
+                              l10n.setupScreenDescription,
                               style: AppTextStyles.caption,
                             ),
                           ],
@@ -113,7 +115,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   ),
                 ).animate().fadeIn(duration: 400.ms),
                 const SizedBox(height: 28),
-                Text('Admin Details', style: AppTextStyles.title)
+                Text(l10n.adminDetails, style: AppTextStyles.title)
                     .animate(delay: 50.ms)
                     .fadeIn(duration: 300.ms),
                 const SizedBox(height: 16),
@@ -121,27 +123,27 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   controller: _nameCtrl,
                   textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Full name',
-                    prefixIcon: Icon(Icons.person_outline_rounded),
+                  decoration: InputDecoration(
+                    labelText: l10n.fullName,
+                    prefixIcon: const Icon(Icons.person_outline_rounded),
                   ),
                   validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Name is required' : null,
+                      v == null || v.trim().isEmpty ? l10n.nameRequired : null,
                 ).animate(delay: 100.ms).fadeIn(duration: 400.ms),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Email address',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    labelText: l10n.emailAddress,
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
-                      return 'Email is required';
+                      return l10n.emailRequired;
                     }
-                    if (!v.contains('@')) return 'Enter a valid email';
+                    if (!v.contains('@')) return l10n.enterValidEmail;
                     return null;
                   },
                 ).animate(delay: 140.ms).fadeIn(duration: 400.ms),
@@ -150,9 +152,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   controller: _phoneCtrl,
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone number (optional)',
-                    prefixIcon: Icon(Icons.phone_outlined),
+                  decoration: InputDecoration(
+                    labelText: l10n.phoneOptionalLabel,
+                    prefixIcon: const Icon(Icons.phone_outlined),
                   ),
                 ).animate(delay: 160.ms).fadeIn(duration: 400.ms),
                 const SizedBox(height: 14),
@@ -161,7 +163,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   obscureText: _obscurePass,
                   textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
-                    labelText: 'Password',
+                    labelText: l10n.password,
                     prefixIcon: const Icon(Icons.lock_outline_rounded),
                     suffixIcon: IconButton(
                       onPressed: () =>
@@ -172,8 +174,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                     ),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Password is required';
-                    if (v.length < 8) return 'Min. 8 characters';
+                    if (v == null || v.isEmpty) return l10n.passwordRequired;
+                    if (v.length < 8) return l10n.minEightChars;
                     return null;
                   },
                 ).animate(delay: 180.ms).fadeIn(duration: 400.ms),
@@ -183,17 +185,17 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   obscureText: _obscurePass,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _submit(),
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm password',
-                    prefixIcon: Icon(Icons.lock_outline_rounded),
+                  decoration: InputDecoration(
+                    labelText: l10n.confirmPassword,
+                    prefixIcon: const Icon(Icons.lock_outline_rounded),
                   ),
                   validator: (v) => v != _passwordCtrl.text
-                      ? 'Passwords do not match'
+                      ? l10n.passwordsDoNotMatch
                       : null,
                 ).animate(delay: 200.ms).fadeIn(duration: 400.ms),
                 const SizedBox(height: 32),
                 GradientButton(
-                  label: 'Create Super Admin',
+                  label: l10n.createSuperAdmin,
                   onPressed: _submit,
                   isLoading: isLoading,
                   icon: Icons.admin_panel_settings_rounded,
