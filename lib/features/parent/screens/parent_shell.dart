@@ -16,20 +16,29 @@ class ParentShell extends ConsumerStatefulWidget {
 }
 
 class _ParentShellState extends ConsumerState<ParentShell> {
-  int _currentIndex = 0;
-
   static const _tabRoutes = [
     (AppRoutes.parent, Icons.home_rounded),
     (AppRoutes.parentSignInOut, Icons.login_rounded),
     (AppRoutes.parentGuardians, Icons.people_rounded),
     (AppRoutes.parentSickLeave, Icons.local_hospital_rounded),
+    (AppRoutes.parentGps, Icons.location_on_rounded),
   ];
+
+  int _indexFromLocation(String location) {
+    if (location.startsWith(AppRoutes.parentGps)) return 4;
+    if (location.startsWith(AppRoutes.parentSickLeave)) return 3;
+    if (location.startsWith(AppRoutes.parentGuardians)) return 2;
+    if (location.startsWith(AppRoutes.parentSignInOut)) return 1;
+    return 0;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(currentUserProvider).valueOrNull;
-    final tabLabels = [l10n.navHome, l10n.navSignInOut, l10n.navGuardians, l10n.navSickLeave];
+    final tabLabels = [l10n.navHome, l10n.navSignInOut, l10n.navGuardians, l10n.navSickLeave, l10n.navGps];
+    final location = GoRouterState.of(context).uri.path;
+    final currentIndex = _indexFromLocation(location);
 
     return Scaffold(
       appBar: AppBar(
@@ -77,11 +86,8 @@ class _ParentShellState extends ConsumerState<ParentShell> {
       ),
       body: widget.child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) {
-          setState(() => _currentIndex = i);
-          context.go(_tabRoutes[i].$1);
-        },
+        selectedIndex: currentIndex,
+        onDestinationSelected: (i) => context.go(_tabRoutes[i].$1),
         destinations: List.generate(
           _tabRoutes.length,
           (i) => NavigationDestination(

@@ -528,6 +528,12 @@ abstract class AppLocalizations {
   /// **'Sick Leave'**
   String get navSickLeave;
 
+  /// No description provided for @navGps.
+  ///
+  /// In en, this message translates to:
+  /// **'GPS'**
+  String get navGps;
+
   /// No description provided for @navKids.
   ///
   /// In en, this message translates to:

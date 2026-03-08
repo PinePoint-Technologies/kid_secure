@@ -226,6 +226,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSickLeave => 'Sick Leave';
 
   @override
+  String get navGps => 'GPS';
+
+  @override
   String get navKids => 'Kids';
 
   @override

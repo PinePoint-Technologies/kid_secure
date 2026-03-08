@@ -231,6 +231,9 @@ class AppLocalizationsVe extends AppLocalizations {
   String get navSickLeave => 'Murulo wa u lwala';
 
   @override
+  String get navGps => 'GPS';
+
+  @override
   String get navKids => 'Vhana';
 
   @override

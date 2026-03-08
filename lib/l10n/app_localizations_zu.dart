@@ -230,6 +230,9 @@ class AppLocalizationsZu extends AppLocalizations {
   String get navSickLeave => 'Ikhefu Lokugula';
 
   @override
+  String get navGps => 'GPS';
+
+  @override
   String get navKids => 'Izingane';
 
   @override

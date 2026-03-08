@@ -33,6 +33,7 @@ import '../../features/parent/guardians/guardian_list_screen.dart';
 import '../../features/parent/guardians/add_guardian_screen.dart';
 import '../../features/parent/sick_leave/sick_leave_screen.dart';
 import '../../features/parent/sick_leave/log_sick_leave_screen.dart';
+import '../../features/parent/gps/gps_tracking_screen.dart';
 import '../../features/auth/screens/invite_register_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/settings/screens/edit_profile_screen.dart';
@@ -88,6 +89,7 @@ abstract final class AppRoutes {
   static const parentAddGuardian = '/parent/guardians/new';
   static const parentSickLeave = '/parent/sick-leave';
   static const parentLogSickLeave = '/parent/sick-leave/new';
+  static const parentGps = '/parent/gps';
 
   // Invite registration (no auth required)
   static const inviteRegister = '/invite/register';
@@ -372,6 +374,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.parentLogSickLeave,
             builder: (_, __) => const LogSickLeaveScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.parentGps,
+            builder: (_, __) => const GpsTrackingScreen(),
           ),
         ],
       ),

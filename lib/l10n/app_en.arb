@@ -154,6 +154,8 @@
   "@navGuardians": {},
   "navSickLeave": "Sick Leave",
   "@navSickLeave": {},
+  "navGps": "GPS",
+  "@navGps": {},
   "navKids": "Kids",
   "@navKids": {},
   "navAttendance": "Attendance",
