@@ -131,7 +131,7 @@ class _AdminAddKidScreenState extends ConsumerState<AdminAddKidScreen> {
                     const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Text('Error loading schools: $e'),
                 data: (creches) => DropdownButtonFormField<String>(
-                  value: _selectedCrecheId,
+                  initialValue: _selectedCrecheId,
                   decoration: const InputDecoration(
                     labelText: 'Select School',
                     prefixIcon: Icon(Icons.school_rounded),

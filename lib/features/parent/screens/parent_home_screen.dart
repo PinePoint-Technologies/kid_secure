@@ -9,6 +9,7 @@ import '../../../core/utils/formatter.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/kid_avatar.dart';
 import '../../../shared/widgets/status_chip.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/parent_provider.dart';
 
@@ -17,6 +18,7 @@ class ParentHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(currentUserProvider).valueOrNull;
     final childrenAsync = ref.watch(parentChildrenProvider);
     final now = DateTime.now();
@@ -30,7 +32,7 @@ class ParentHomeScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Hello, ${user?.displayName.split(' ').first ?? 'Parent'} 👋',
+                  '${l10n.helloUser(user?.displayName.split(' ').first ?? l10n.parentRole)} 👋',
                   style: AppTextStyles.headline2,
                 ).animate().fadeIn(duration: 400.ms),
                 Text(Formatter.date(now), style: AppTextStyles.caption)
@@ -41,21 +43,21 @@ class ParentHomeScreen extends ConsumerWidget {
                 Row(
                   children: [
                     _QuickBtn(
-                      label: 'Sign In/Out',
+                      label: l10n.navSignInOut,
                       icon: Icons.login_rounded,
                       gradient: AppColors.primaryGradient,
                       onTap: () => context.go(AppRoutes.parentSignInOut),
                     ),
                     const SizedBox(width: 10),
                     _QuickBtn(
-                      label: 'Guardians',
+                      label: l10n.navGuardians,
                       icon: Icons.people_rounded,
                       gradient: AppColors.teacherGradient,
                       onTap: () => context.go(AppRoutes.parentGuardians),
                     ),
                     const SizedBox(width: 10),
                     _QuickBtn(
-                      label: 'Sick Leave',
+                      label: l10n.navSickLeave,
                       icon: Icons.local_hospital_rounded,
                       gradient: AppColors.superAdminGradient,
                       onTap: () => context.go(AppRoutes.parentSickLeave),
@@ -63,7 +65,7 @@ class ParentHomeScreen extends ConsumerWidget {
                   ],
                 ).animate(delay: 100.ms).fadeIn(duration: 500.ms),
                 const SizedBox(height: 28),
-                Text("My Children", style: AppTextStyles.title)
+                Text(l10n.myChildren, style: AppTextStyles.title)
                     .animate(delay: 150.ms)
                     .fadeIn(duration: 400.ms),
                 const SizedBox(height: 12),
@@ -79,16 +81,16 @@ class ParentHomeScreen extends ConsumerWidget {
           error: (e, _) =>
               SliverToBoxAdapter(child: Center(child: Text('Error: $e'))),
           data: (children) => children.isEmpty
-              ? const SliverToBoxAdapter(
+              ? SliverToBoxAdapter(
                   child: Center(
                     child: Padding(
-                      padding: EdgeInsets.all(40),
+                      padding: const EdgeInsets.all(40),
                       child: Column(
                         children: [
-                          Icon(Icons.child_care_outlined,
+                          const Icon(Icons.child_care_outlined,
                               size: 64, color: AppColors.textHint),
-                          SizedBox(height: 12),
-                          Text('No children linked yet.\nContact your teacher.',
+                          const SizedBox(height: 12),
+                          Text(AppLocalizations.of(context)!.noChildrenLinked,
                               textAlign: TextAlign.center),
                         ],
                       ),
@@ -147,7 +149,7 @@ class _ChildStatusCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(child.fullName, style: AppTextStyles.titleMedium),
-                Text('Age: ${Formatter.age(child.dateOfBirth)}',
+                Text(AppLocalizations.of(context)!.ageLabel(Formatter.age(child.dateOfBirth)),
                     style: AppTextStyles.bodySmall),
                 const SizedBox(height: 6),
                 attendanceAsync.when(
@@ -166,7 +168,7 @@ class _ChildStatusCard extends ConsumerWidget {
                             color: AppColors.border,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text('Not yet signed in',
+                          child: Text(AppLocalizations.of(context)!.notYetSignedIn,
                               style: AppTextStyles.caption),
                         ),
                 ),

@@ -120,7 +120,7 @@ class SecurityScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<int>(
-                  value: settings.sessionTimeoutMinutes,
+                  initialValue: settings.sessionTimeoutMinutes,
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),

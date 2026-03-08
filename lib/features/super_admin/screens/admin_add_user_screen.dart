@@ -297,7 +297,7 @@ class _CrecheDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: selectedId,
+      initialValue: selectedId,
       decoration: const InputDecoration(
         labelText: 'School (optional)',
         prefixIcon: Icon(Icons.school_outlined),
