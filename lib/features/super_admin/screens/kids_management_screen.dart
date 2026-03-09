@@ -9,6 +9,7 @@ import '../../../core/utils/formatter.dart';
 import '../../../shared/models/child_model.dart';
 import '../../../shared/models/creche_model.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../core/providers/firebase_providers.dart';
 import '../providers/super_admin_provider.dart';
 
 class KidsManagementScreen extends ConsumerWidget {
@@ -83,6 +84,55 @@ class _KidCard extends ConsumerWidget {
   final ChildModel child;
   final CrecheModel? creche;
   const _KidCard({required this.child, this.creche});
+
+  Future<void> _showAssignTrackerDialog(
+      BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController(text: child.trackerId ?? '');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Tracker for ${child.firstName}'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Device ID',
+            hintText: 'e.g. DEVICE_001',
+            prefixIcon: Icon(Icons.gps_fixed_rounded),
+          ),
+          textCapitalization: TextCapitalization.characters,
+        ),
+        actions: [
+          if (child.trackerId != null)
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              style: TextButton.styleFrom(foregroundColor: AppColors.error),
+              child: const Text('Remove Tracker'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (!context.mounted) return;
+    if (confirmed == true) {
+      final id = controller.text.trim();
+      await ref
+          .read(firestoreServiceProvider)
+          .assignTrackerToChild(child.id, id.isEmpty ? null : id);
+    } else if (confirmed == false) {
+      // "Remove Tracker" tapped
+      await ref
+          .read(firestoreServiceProvider)
+          .assignTrackerToChild(child.id, null);
+    }
+    controller.dispose();
+  }
 
   Future<void> _confirmDeactivate(
       BuildContext context, WidgetRef ref) async {
@@ -165,6 +215,18 @@ class _KidCard extends ConsumerWidget {
             tooltip: 'Link Parent',
             onPressed: () => context.go(
                 AppRoutes.superAdminLinkParentPath(child.id)),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.gps_fixed_rounded,
+              color: child.trackerId != null
+                  ? Colors.blue
+                  : AppColors.textHint,
+            ),
+            tooltip: child.trackerId != null
+                ? 'Tracker: ${child.trackerId}'
+                : 'Assign Tracker',
+            onPressed: () => _showAssignTrackerDialog(context, ref),
           ),
           IconButton(
             icon: const Icon(Icons.remove_circle_outline_rounded),

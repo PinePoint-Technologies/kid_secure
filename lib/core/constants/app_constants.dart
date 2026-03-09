@@ -10,6 +10,7 @@ abstract final class AppConstants {
   static const String colPayments = 'payments';
   static const String colInvoices = 'invoices';
   static const String colLocations = 'locations';
+  static const String colTrackers = 'trackers';
   static const String colInvites = 'invites';
   static const String colAuditLogs = 'audit_logs';
 

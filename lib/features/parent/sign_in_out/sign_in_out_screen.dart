@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -305,9 +306,24 @@ class _AttendanceActions extends ConsumerWidget {
     this.user,
   });
 
+  Future<Position?> _getPosition() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        return await Geolocator.getCurrentPosition(
+          locationSettings:
+              const LocationSettings(accuracy: LocationAccuracy.high),
+        ).timeout(const Duration(seconds: 5));
+      }
+    } catch (_) {}
+    return null;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final attendanceAsync = ref.watch(childAttendanceProvider(child.id));
+    final creche = ref.watch(crecheProvider(child.crecheId)).valueOrNull;
 
     return attendanceAsync.when(
       loading: () => const CircularProgressIndicator(),
@@ -338,11 +354,15 @@ class _AttendanceActions extends ConsumerWidget {
               GradientButton(
                 label: l10n.signIn,
                 onPressed: () async {
+                  final pos = await _getPosition();
                   await ref.read(signInOutProvider.notifier).signIn(
                         childId: child.id,
                         crecheId: child.crecheId,
                         byUid: user?.uid ?? '',
                         byName: user?.displayName ?? 'Parent',
+                        latitude: pos?.latitude,
+                        longitude: pos?.longitude,
+                        creche: creche,
                       );
                 },
                 isLoading: isLoading,
@@ -353,10 +373,14 @@ class _AttendanceActions extends ConsumerWidget {
               GradientButton(
                 label: l10n.signOut,
                 onPressed: () async {
+                  final pos = await _getPosition();
                   await ref.read(signInOutProvider.notifier).signOut(
                         recordId: record.id,
                         byUid: user?.uid ?? '',
                         byName: user?.displayName ?? 'Parent',
+                        latitude: pos?.latitude,
+                        longitude: pos?.longitude,
+                        creche: creche,
                       );
                 },
                 isLoading: isLoading,

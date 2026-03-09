@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +12,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/providers/firebase_providers.dart';
 import 'core/providers/theme_provider.dart';
+import 'features/auth/providers/auth_provider.dart';
 import 'features/settings/providers/settings_provider.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
@@ -58,6 +61,13 @@ void main() async {
     if (e.code != 'duplicate-app') rethrow;
   }
 
+  // FCM — request permission and configure foreground presentation
+  final messaging = FirebaseMessaging.instance;
+  await messaging.requestPermission(alert: true, badge: true, sound: true);
+  await messaging.setForegroundNotificationPresentationOptions(
+    alert: true, badge: true, sound: true,
+  );
+
   // App Check — debug provider in dev, Play Integrity in production
   await FirebaseAppCheck.instance.activate(
     androidProvider: kDebugMode
@@ -97,9 +107,35 @@ class KidSecureApp extends ConsumerStatefulWidget {
 }
 
 class _KidSecureAppState extends ConsumerState<KidSecureApp> {
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+
   @override
   void initState() {
     super.initState();
+
+    // FCM foreground message → in-app SnackBar
+    FirebaseMessaging.onMessage.listen((message) {
+      final notification = message.notification;
+      if (notification == null) return;
+      _messengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(
+            [notification.title, notification.body]
+                .where((s) => s != null && s.isNotEmpty)
+                .join(' — '),
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    });
+
+    // FCM token refresh
+    FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+      final user = ref.read(currentUserProvider).valueOrNull;
+      if (user != null) {
+        ref.read(firestoreServiceProvider).saveFcmToken(user.uid, token);
+      }
+    });
 
     // Navigate to invite register for cold-start links
     if (widget.initialInviteToken != null) {
@@ -131,7 +167,19 @@ class _KidSecureAppState extends ConsumerState<KidSecureApp> {
       settingsProvider.select((s) => s.languageCode),
     );
 
+    // Save FCM token whenever a user signs in
+    ref.listen(currentUserProvider, (_, next) {
+      next.whenData((user) async {
+        if (user == null) return;
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null) {
+          ref.read(firestoreServiceProvider).saveFcmToken(user.uid, token);
+        }
+      });
+    });
+
     return MaterialApp.router(
+      scaffoldMessengerKey: _messengerKey,
       title: 'KidSecure',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,

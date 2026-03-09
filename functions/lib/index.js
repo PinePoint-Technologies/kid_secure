@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.consumeInvite = exports.validateInvite = exports.generateInvite = void 0;
+exports.notifyParentsOnAttendance = exports.consumeInvite = exports.validateInvite = exports.generateInvite = void 0;
 const admin = require("firebase-admin");
 const https_1 = require("firebase-functions/v2/https");
+const firestore_1 = require("firebase-functions/v2/firestore");
 const params_1 = require("firebase-functions/params");
 const jwt = require("jsonwebtoken");
 const uuid_1 = require("uuid");
@@ -150,4 +151,92 @@ exports.consumeInvite = (0, https_1.onCall)({ secrets: [INVITE_JWT_SECRET] }, as
     });
     return { success: true };
 });
+// ── notifyParentsOnAttendance ─────────────────────────────────────────────────
+// Triggered whenever an attendance document is created or updated.
+// Sends an FCM push notification to all linked parents when a child is
+// signed in or out, and includes geofence status in the message body.
+exports.notifyParentsOnAttendance = (0, firestore_1.onDocumentWritten)("attendance/{docId}", async (event) => {
+    var _a, _b, _c, _d, _e, _f;
+    const after = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.after) === null || _b === void 0 ? void 0 : _b.data();
+    const before = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.before) === null || _d === void 0 ? void 0 : _d.data();
+    // Ignore deletes and non-attendance-status documents
+    if (!after)
+        return;
+    const status = after.status;
+    if (status !== "signed_in" && status !== "signed_out")
+        return;
+    // Only act on actual status transitions
+    if ((before === null || before === void 0 ? void 0 : before.status) === status)
+        return;
+    const childId = after.childId;
+    const crecheId = after.crecheId;
+    // ── Fetch child ──────────────────────────────────────────────────────────
+    const childSnap = await db.collection("children").doc(childId).get();
+    if (!childSnap.exists)
+        return;
+    const childData = childSnap.data();
+    const childName = `${childData.firstName} ${childData.lastName}`;
+    const parentIds = (_e = childData.parentIds) !== null && _e !== void 0 ? _e : [];
+    // ── Fetch crèche ─────────────────────────────────────────────────────────
+    const crecheSnap = await db.collection("creches").doc(crecheId).get();
+    const crecheName = crecheSnap.exists ? crecheSnap.data().name : "Crèche";
+    // ── Geofence check (sign-in only) ────────────────────────────────────────
+    let withinGeofence = null;
+    if (status === "signed_in" && crecheSnap.exists) {
+        const crecheData = crecheSnap.data();
+        const cLat = crecheData.latitude;
+        const cLon = crecheData.longitude;
+        const radius = (_f = crecheData.geofenceRadiusMeters) !== null && _f !== void 0 ? _f : 200;
+        const signLat = after.signInLatitude;
+        const signLon = after.signInLongitude;
+        if (cLat != null && cLon != null && signLat != null && signLon != null) {
+            withinGeofence = _haversineMeters(signLat, signLon, cLat, cLon) <= radius;
+        }
+    }
+    // ── Build notification ───────────────────────────────────────────────────
+    let title;
+    let body;
+    if (status === "signed_in") {
+        title = `${childName} has arrived`;
+        body = withinGeofence === false
+            ? `⚠️ Signed in outside ${crecheName}`
+            : `✅ Signed in at ${crecheName}`;
+    }
+    else {
+        title = `${childName} has left`;
+        body = `Signed out from ${crecheName}`;
+    }
+    // ── Collect FCM tokens ───────────────────────────────────────────────────
+    const tokens = [];
+    for (const uid of parentIds) {
+        const userSnap = await db.collection("users").doc(uid).get();
+        if (!userSnap.exists)
+            continue;
+        const token = userSnap.data().fcmToken;
+        if (token)
+            tokens.push(token);
+    }
+    if (tokens.length === 0)
+        return;
+    // ── Send FCM ─────────────────────────────────────────────────────────────
+    await admin.messaging().sendEachForMulticast({
+        tokens,
+        notification: { title, body },
+        data: { childId, crecheId, status },
+        android: { priority: "high" },
+        apns: { payload: { aps: { sound: "default" } } },
+    });
+});
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function _haversineMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = _toRad(lat2 - lat1);
+    const dLon = _toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(_toRad(lat1)) * Math.cos(_toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function _toRad(deg) {
+    return (deg * Math.PI) / 180;
+}
 //# sourceMappingURL=index.js.map

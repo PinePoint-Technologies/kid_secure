@@ -80,6 +80,7 @@ class UserModel {
   final DateTime createdAt;
   final DateTime? lastSignIn;
   final Map<String, dynamic>? metadata;
+  final String? fcmToken;
 
   const UserModel({
     required this.uid,
@@ -93,6 +94,7 @@ class UserModel {
     required this.createdAt,
     this.lastSignIn,
     this.metadata,
+    this.fcmToken,
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -109,6 +111,7 @@ class UserModel {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       lastSignIn: (data['lastSignIn'] as Timestamp?)?.toDate(),
       metadata: data['metadata'] as Map<String, dynamic>?,
+      fcmToken: data['fcmToken'] as String?,
     );
   }
 
@@ -124,6 +127,7 @@ class UserModel {
         'lastSignIn':
             lastSignIn != null ? Timestamp.fromDate(lastSignIn!) : null,
         'metadata': metadata,
+        'fcmToken': fcmToken,
       };
 
   /// `true` when this user is a super-admin.
@@ -143,6 +147,7 @@ class UserModel {
     bool? isActive,
     DateTime? lastSignIn,
     Map<String, dynamic>? metadata,
+    String? fcmToken,
   }) =>
       UserModel(
         uid: uid,
@@ -156,5 +161,6 @@ class UserModel {
         createdAt: createdAt,
         lastSignIn: lastSignIn ?? this.lastSignIn,
         metadata: metadata ?? this.metadata,
+        fcmToken: fcmToken ?? this.fcmToken,
       );
 }

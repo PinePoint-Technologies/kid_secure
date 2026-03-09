@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/firebase_providers.dart';
+import '../../../core/utils/geofence_utils.dart';
 import '../../../shared/models/attendance_model.dart';
 import '../../../shared/models/child_model.dart';
+import '../../../shared/models/creche_model.dart';
 import '../../../shared/models/guardian_model.dart';
 import '../../../shared/models/sick_leave_model.dart';
+import '../../../shared/models/tracker_location_model.dart';
 import '../../../shared/services/firestore_service.dart';
 import '../../../shared/utils/pin_hasher.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -32,6 +35,22 @@ final childAttendanceProvider =
   return ref
       .watch(firestoreServiceProvider)
       .watchTodayAttendance(childId, DateTime.now());
+});
+
+// Live tracker location for a device
+final trackerLocationProvider =
+    StreamProvider.family<TrackerLocation?, String>((ref, deviceId) {
+  if (deviceId.isEmpty) return Stream.value(null);
+  return ref
+      .watch(firestoreServiceProvider)
+      .watchLatestTrackerLocation(deviceId);
+});
+
+// Crèche by id (used for geofence info)
+final crecheProvider =
+    StreamProvider.family<CrecheModel?, String>((ref, crecheId) {
+  if (crecheId.isEmpty) return Stream.value(null);
+  return ref.watch(firestoreServiceProvider).watchCrecheById(crecheId);
 });
 
 // Parent's sick leave history
@@ -83,6 +102,9 @@ class SignInOutNotifier extends Notifier<SignInOutState> {
     required String byUid,
     required String byName,
     String method = 'manual',
+    double? latitude,
+    double? longitude,
+    CrecheModel? creche,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -97,13 +119,18 @@ class SignInOutNotifier extends Notifier<SignInOutState> {
         signInByUid: byUid,
         signInByName: byName,
         signInMethod: method,
+        signInLatitude: latitude,
+        signInLongitude: longitude,
       );
       await _service.createAttendanceRecord(record);
-      state = state.copyWith(
-        isLoading: false,
-        isSuccess: true,
-        message: 'Signed in successfully at ${_formatTime(now)}',
+      final msg = _geofenceMessage(
+        prefix: 'Signed in',
+        time: now,
+        latitude: latitude,
+        longitude: longitude,
+        creche: creche,
       );
+      state = state.copyWith(isLoading: false, isSuccess: true, message: msg);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: 'Sign-in failed.');
     }
@@ -114,6 +141,9 @@ class SignInOutNotifier extends Notifier<SignInOutState> {
     required String byUid,
     required String byName,
     String method = 'manual',
+    double? latitude,
+    double? longitude,
+    CrecheModel? creche,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -124,15 +154,46 @@ class SignInOutNotifier extends Notifier<SignInOutState> {
         'signOutByUid': byUid,
         'signOutByName': byName,
         'signOutMethod': method,
+        if (latitude != null) 'signOutLatitude': latitude,
+        if (longitude != null) 'signOutLongitude': longitude,
       });
-      state = state.copyWith(
-        isLoading: false,
-        isSuccess: true,
-        message: 'Signed out at ${_formatTime(now)}',
+      final msg = _geofenceMessage(
+        prefix: 'Signed out',
+        time: now,
+        latitude: latitude,
+        longitude: longitude,
+        creche: creche,
       );
+      state = state.copyWith(isLoading: false, isSuccess: true, message: msg);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: 'Sign-out failed.');
     }
+  }
+
+  String _geofenceMessage({
+    required String prefix,
+    required DateTime time,
+    double? latitude,
+    double? longitude,
+    CrecheModel? creche,
+  }) {
+    final t = _formatTime(time);
+    if (latitude == null ||
+        longitude == null ||
+        creche?.latitude == null ||
+        creche?.longitude == null) {
+      return '$prefix at $t';
+    }
+    final within = GeofenceUtils.isWithinGeofence(
+      lat: latitude,
+      lon: longitude,
+      crecheLat: creche!.latitude!,
+      crecheLon: creche.longitude!,
+      radiusMeters: creche.geofenceRadiusMeters,
+    );
+    return within
+        ? '$prefix at $t — within crèche boundary'
+        : '$prefix at $t — outside crèche boundary';
   }
 
   String _formatTime(DateTime dt) =>

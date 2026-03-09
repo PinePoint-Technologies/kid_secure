@@ -20,6 +20,7 @@ class ChildModel {
   final DateTime? graduationDate;
   final Map<String, dynamic>? emergencyContact;
   final String? qrCode; // unique QR for sign-in/out
+  final String? trackerId; // GPS tracker device ID
 
   const ChildModel({
     required this.id,
@@ -39,6 +40,7 @@ class ChildModel {
     this.graduationDate,
     this.emergencyContact,
     this.qrCode,
+    this.trackerId,
   });
 
   String get fullName => '$firstName $lastName';
@@ -70,6 +72,7 @@ class ChildModel {
       graduationDate: (data['graduationDate'] as Timestamp?)?.toDate(),
       emergencyContact: data['emergencyContact'] as Map<String, dynamic>?,
       qrCode: data['qrCode'] as String?,
+      trackerId: data['trackerId'] as String?,
     );
   }
 
@@ -91,6 +94,7 @@ class ChildModel {
             graduationDate != null ? Timestamp.fromDate(graduationDate!) : null,
         'emergencyContact': emergencyContact,
         'qrCode': qrCode,
+        'trackerId': trackerId,
       };
 
   ChildModel copyWith({
@@ -108,6 +112,7 @@ class ChildModel {
     DateTime? graduationDate,
     Map<String, dynamic>? emergencyContact,
     String? qrCode,
+    String? trackerId,
   }) =>
       ChildModel(
         id: id,
@@ -127,5 +132,6 @@ class ChildModel {
         graduationDate: graduationDate ?? this.graduationDate,
         emergencyContact: emergencyContact ?? this.emergencyContact,
         qrCode: qrCode ?? this.qrCode,
+        trackerId: trackerId ?? this.trackerId,
       );
 }

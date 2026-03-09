@@ -111,5 +111,17 @@ service cloud.firestore {
       allow read:  if isSuperAdmin();
       allow write: if false;
     }
+
+    // ── Trackers ──────────────────────────────────────────────────────────────
+    // Written exclusively by the trackerWebhook Cloud Function (Admin SDK).
+    // Authenticated users (parents, teachers, super_admin) can read.
+    match /trackers/{deviceId} {
+      allow read: if isAuth();
+      allow write: if false;
+    }
+    match /trackers/{deviceId}/locations/{locId} {
+      allow read: if isAuth();
+      allow write: if false;
+    }
   }
 }

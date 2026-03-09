@@ -5,6 +5,7 @@ import '../models/creche_model.dart';
 import '../models/guardian_model.dart';
 import '../models/attendance_model.dart';
 import '../models/sick_leave_model.dart';
+import '../models/tracker_location_model.dart';
 import '../../core/constants/app_constants.dart';
 
 class FirestoreService {
@@ -34,12 +35,23 @@ class FirestoreService {
       .doc(uid)
       .update({...data, 'updatedAt': FieldValue.serverTimestamp()});
 
+  Future<void> saveFcmToken(String uid, String token) => _db
+      .collection(AppConstants.colUsers)
+      .doc(uid)
+      .update({'fcmToken': token});
+
   // ─── Creches ──────────────────────────────────────────────────────────────
   Stream<List<CrecheModel>> watchAllCreches() => _db
       .collection(AppConstants.colCreches)
       .where('isActive', isEqualTo: true)
       .snapshots()
       .map((s) => s.docs.map(CrecheModel.fromFirestore).toList());
+
+  Stream<CrecheModel?> watchCrecheById(String id) => _db
+      .collection(AppConstants.colCreches)
+      .doc(id)
+      .snapshots()
+      .map((d) => d.exists ? CrecheModel.fromFirestore(d) : null);
 
   Stream<List<CrecheModel>> watchCrechesByIds(List<String> ids) {
     if (ids.isEmpty) return Stream.value([]);
@@ -289,6 +301,21 @@ class FirestoreService {
       .collection(AppConstants.colSickLeave)
       .doc(id)
       .update({...data, 'updatedAt': FieldValue.serverTimestamp()});
+
+  // ─── Trackers ────────────────────────────────────────────────────────────
+
+  /// Streams the latest location snapshot for [deviceId].
+  Stream<TrackerLocation?> watchLatestTrackerLocation(String deviceId) => _db
+      .collection(AppConstants.colTrackers)
+      .doc(deviceId)
+      .snapshots()
+      .map((d) => d.exists ? TrackerLocation.fromFirestore(d) : null);
+
+  /// Sets or clears the tracker device linked to a child.
+  Future<void> assignTrackerToChild(String childId, String? trackerId) => _db
+      .collection(AppConstants.colChildren)
+      .doc(childId)
+      .update({'trackerId': trackerId});
 
   // ─── Bootstrap ───────────────────────────────────────────────────────────
   Stream<bool> watchBootstrapped() => _db
