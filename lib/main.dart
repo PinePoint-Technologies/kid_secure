@@ -83,6 +83,20 @@ void main() async {
         : AppleProvider.deviceCheck,
   );
 
+  // In debug mode, print the App Check token so developers can register it
+  // in Firebase Console → App Check → iOS app → Manage debug tokens.
+  if (kDebugMode) {
+    final appCheckToken = await FirebaseAppCheck.instance.getToken(true);
+    // ignore: avoid_print
+    print('┌─────────────────────────────────────────────────────┐');
+    // ignore: avoid_print
+    print('│ APP CHECK TOKEN (register in Firebase Console)      │');
+    // ignore: avoid_print
+    print('│ ${appCheckToken?.token ?? 'unavailable'}');
+    // ignore: avoid_print
+    print('└─────────────────────────────────────────────────────┘');
+  }
+
   // Capture initial deep link (cold-start: app was not running when link tapped)
   String? initialInviteToken;
   try {
