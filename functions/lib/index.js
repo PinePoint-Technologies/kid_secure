@@ -1,15 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.notifyParentsOnAttendance = exports.consumeInvite = exports.validateInvite = exports.generateInvite = void 0;
+exports.sendCrecheWelcomeEmail = exports.traccarWebhook = exports.trackerWebhook = exports.notifyParentsOnAttendance = exports.consumeInvite = exports.validateInvite = exports.generateInvite = void 0;
 const admin = require("firebase-admin");
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-functions/v2/firestore");
 const params_1 = require("firebase-functions/params");
 const jwt = require("jsonwebtoken");
 const uuid_1 = require("uuid");
+const nodemailer = require("nodemailer");
 admin.initializeApp();
 const db = admin.firestore();
 const INVITE_JWT_SECRET = (0, params_1.defineSecret)("INVITE_JWT_SECRET");
+const TRACKER_API_KEY = (0, params_1.defineSecret)("TRACKER_API_KEY");
+const SMTP_USER = (0, params_1.defineSecret)("SMTP_USER");
+const SMTP_PASS = (0, params_1.defineSecret)("SMTP_PASS");
 // ── generateInvite ────────────────────────────────────────────────────────────
 // Called by: super_admin (role='teacher' or 'parent') | teacher (role='parent' only)
 // Returns:   { deepLink, tokenId }
@@ -227,6 +231,289 @@ exports.notifyParentsOnAttendance = (0, firestore_1.onDocumentWritten)("attendan
         apns: { payload: { aps: { sound: "default" } } },
     });
 });
+// ── trackerWebhook ────────────────────────────────────────────────────────────
+// HTTP endpoint for GPS+GSM tracker devices.
+// Tracker must POST JSON with x-tracker-key header matching TRACKER_API_KEY.
+//
+// Request body:
+//   { deviceId, lat, lon, timestamp?, speed?, batteryLevel? }
+// Response:
+//   200 { ok: true } | 400/401 { error: string }
+exports.trackerWebhook = (0, https_1.onRequest)({ secrets: [TRACKER_API_KEY] }, async (req, res) => {
+    // ── Auth ─────────────────────────────────────────────────────────────────
+    const apiKey = req.headers["x-tracker-key"];
+    if (!apiKey || apiKey !== TRACKER_API_KEY.value()) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    // ── Validate body ─────────────────────────────────────────────────────────
+    const { deviceId, lat, lon, timestamp, speed, batteryLevel } = req.body;
+    if (!deviceId || lat == null || lon == null) {
+        res.status(400).json({ error: "deviceId, lat, and lon are required." });
+        return;
+    }
+    const recordedAt = timestamp != null
+        ? admin.firestore.Timestamp.fromMillis(timestamp * 1000)
+        : admin.firestore.FieldValue.serverTimestamp();
+    const locationData = Object.assign(Object.assign({ lat,
+        lon,
+        recordedAt }, (speed != null && { speed })), (batteryLevel != null && { batteryLevel }));
+    await _handleTrackerPing(deviceId, lat, lon, locationData);
+    res.status(200).json({ ok: true });
+});
+// ── traccarWebhook ────────────────────────────────────────────────────────────
+// Receives position forwards from a self-hosted Traccar server.
+// Configure Traccar: forward.type=json, forward.url=<this URL>,
+//   forward.header=x-tracker-key: <TRACKER_API_KEY secret value>
+// Traccar POSTs: { position: { latitude, longitude, speed (knots),
+//   fixTime (ISO 8601), attributes: { battery } }, device: { uniqueId } }
+exports.traccarWebhook = (0, https_1.onRequest)({ secrets: [TRACKER_API_KEY] }, async (req, res) => {
+    var _a, _b, _c, _d, _e, _f, _g;
+    const apiKey = req.headers["x-tracker-key"];
+    if (!apiKey || apiKey !== TRACKER_API_KEY.value()) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    const body = req.body;
+    const deviceId = (_a = body.device) === null || _a === void 0 ? void 0 : _a.uniqueId;
+    const lat = (_b = body.position) === null || _b === void 0 ? void 0 : _b.latitude;
+    const lon = (_c = body.position) === null || _c === void 0 ? void 0 : _c.longitude;
+    if (!deviceId || lat == null || lon == null) {
+        res.status(400).json({
+            error: "device.uniqueId, position.latitude and position.longitude are required.",
+        });
+        return;
+    }
+    const fixTime = (_d = body.position) === null || _d === void 0 ? void 0 : _d.fixTime;
+    const recordedAt = fixTime
+        ? admin.firestore.Timestamp.fromDate(new Date(fixTime))
+        : admin.firestore.FieldValue.serverTimestamp();
+    // Traccar reports speed in knots — convert to m/s
+    const speedKnots = (_e = body.position) === null || _e === void 0 ? void 0 : _e.speed;
+    const speedMs = speedKnots != null ? speedKnots * 0.514444 : undefined;
+    const batteryLevel = (_g = (_f = body.position) === null || _f === void 0 ? void 0 : _f.attributes) === null || _g === void 0 ? void 0 : _g.battery;
+    const locationData = Object.assign(Object.assign({ lat,
+        lon,
+        recordedAt }, (speedMs != null && { speed: speedMs })), (batteryLevel != null && { batteryLevel }));
+    await _handleTrackerPing(deviceId, lat, lon, locationData);
+    res.status(200).json({ ok: true });
+});
+// ── _handleTrackerPing ────────────────────────────────────────────────────────
+// Writes a tracker location to Firestore and sends a geofence-breach FCM
+// notification to linked parents when the device is outside the crèche boundary.
+async function _handleTrackerPing(deviceId, lat, lon, locationData) {
+    var _a, _b, _c, _d;
+    const trackerRef = db.collection("trackers").doc(deviceId);
+    await Promise.all([
+        trackerRef.set(locationData, { merge: true }),
+        trackerRef.collection("locations").add(locationData),
+    ]);
+    const childSnap = await db
+        .collection("children")
+        .where("trackerId", "==", deviceId)
+        .where("status", "==", "active")
+        .limit(1)
+        .get();
+    if (childSnap.empty)
+        return;
+    const childDoc = childSnap.docs[0];
+    const childData = childDoc.data();
+    const childName = `${childData.firstName} ${childData.lastName}`;
+    const crecheId = (_a = childData.crecheId) !== null && _a !== void 0 ? _a : "";
+    const parentIds = (_b = childData.parentIds) !== null && _b !== void 0 ? _b : [];
+    const crecheSnap = await db.collection("creches").doc(crecheId).get();
+    if (!crecheSnap.exists)
+        return;
+    const crecheData = crecheSnap.data();
+    const cLat = crecheData.latitude;
+    const cLon = crecheData.longitude;
+    const radius = (_c = crecheData.geofenceRadiusMeters) !== null && _c !== void 0 ? _c : 200;
+    if (cLat == null || cLon == null)
+        return;
+    if (_haversineMeters(lat, lon, cLat, cLon) <= radius)
+        return;
+    const tokens = [];
+    for (const uid of parentIds) {
+        const userSnap = await db.collection("users").doc(uid).get();
+        if (!userSnap.exists)
+            continue;
+        const fcmToken = userSnap.data().fcmToken;
+        if (fcmToken)
+            tokens.push(fcmToken);
+    }
+    if (tokens.length > 0) {
+        await admin.messaging().sendEachForMulticast({
+            tokens,
+            notification: {
+                title: `⚠️ ${childName} left the crèche`,
+                body: `Tracker detected outside ${(_d = crecheData.name) !== null && _d !== void 0 ? _d : "crèche"} boundary.`,
+            },
+            data: {
+                childId: childDoc.id,
+                crecheId,
+                event: "tracker_geofence_breach",
+                deviceId,
+            },
+            android: { priority: "high" },
+            apns: { payload: { aps: { sound: "default" } } },
+        });
+    }
+}
+// ── sendCrecheWelcomeEmail ────────────────────────────────────────────────────
+// Triggered when a new crèche document is created in Firestore.
+// Sends an onboarding welcome email to the crèche's registered email address.
+exports.sendCrecheWelcomeEmail = (0, firestore_1.onDocumentCreated)({ document: "creches/{crecheId}", secrets: [SMTP_USER, SMTP_PASS] }, async (event) => {
+    var _a, _b;
+    const data = (_a = event.data) === null || _a === void 0 ? void 0 : _a.data();
+    if (!data)
+        return;
+    const email = data.email;
+    if (!email)
+        return; // no email address on this crèche — skip
+    const crecheName = (_b = data.name) !== null && _b !== void 0 ? _b : "Your Crèche";
+    const address = [data.address, data.city, data.province]
+        .filter(Boolean)
+        .join(", ");
+    const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: SMTP_USER.value(), pass: SMTP_PASS.value() },
+    });
+    await transporter.sendMail({
+        from: `"KidSecure" <${SMTP_USER.value()}>`,
+        to: email,
+        subject: `Welcome to KidSecure — ${crecheName} is live!`,
+        html: _buildWelcomeEmailHtml(crecheName, address),
+    });
+});
+// ── Email HTML template ───────────────────────────────────────────────────────
+function _buildWelcomeEmailHtml(crecheName, address) {
+    const addressLine = address ? `<p style="margin:0 0 4px;font-size:14px;color:#6b7280;">${address}</p>` : "";
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Welcome to KidSecure</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1B5286 0%,#2176C7 100%);padding:36px 40px;text-align:center;">
+              <h1 style="margin:0;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">KidSecure</h1>
+              <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.75);letter-spacing:0.5px;">Safe. Smart. Connected.</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 40px 28px;">
+              <h2 style="margin:0 0 6px;font-size:22px;font-weight:700;color:#111827;">Welcome aboard, ${crecheName}!</h2>
+              ${addressLine}
+              <p style="margin:20px 0 0;font-size:15px;line-height:1.7;color:#374151;">
+                Your crèche has been successfully registered on <strong>KidSecure</strong>.
+                You now have access to a complete school management platform built around
+                child safety, real-time GPS tracking, and seamless communication between
+                staff and parents.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 40px;">
+              <hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" />
+            </td>
+          </tr>
+
+          <!-- Next steps -->
+          <tr>
+            <td style="padding:28px 40px 8px;">
+              <h3 style="margin:0 0 20px;font-size:15px;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:0.8px;">Get started in 3 steps</h3>
+
+              <!-- Step 1 -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+                <tr>
+                  <td width="40" valign="top">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#1B5286;color:#fff;font-size:14px;font-weight:700;text-align:center;line-height:32px;">1</div>
+                  </td>
+                  <td style="padding-left:14px;">
+                    <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">Add your teachers</p>
+                    <p style="margin:4px 0 0;font-size:14px;color:#6b7280;line-height:1.5;">Invite your staff so they can sign children in and out and communicate with parents.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Step 2 -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+                <tr>
+                  <td width="40" valign="top">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#1B5286;color:#fff;font-size:14px;font-weight:700;text-align:center;line-height:32px;">2</div>
+                  </td>
+                  <td style="padding-left:14px;">
+                    <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">Enrol children</p>
+                    <p style="margin:4px 0 0;font-size:14px;color:#6b7280;line-height:1.5;">Register each child in your crèche and optionally assign a GPS tracker device to them.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Step 3 -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+                <tr>
+                  <td width="40" valign="top">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#1B5286;color:#fff;font-size:14px;font-weight:700;text-align:center;line-height:32px;">3</div>
+                  </td>
+                  <td style="padding-left:14px;">
+                    <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">Link parents &amp; guardians</p>
+                    <p style="margin:4px 0 0;font-size:14px;color:#6b7280;line-height:1.5;">Invite parents so they receive real-time check-in notifications and can track their child's location.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:24px 40px 0;">
+              <hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" />
+            </td>
+          </tr>
+
+          <!-- Support note -->
+          <tr>
+            <td style="padding:24px 40px 36px;">
+              <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
+                If you have any questions or need help setting up, reply to this email
+                and our support team will be happy to assist.
+              </p>
+              <p style="margin:18px 0 0;font-size:14px;color:#374151;">
+                Welcome to the KidSecure family 👋<br />
+                <strong>The KidSecure Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;padding:20px 40px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;">
+                © ${new Date().getFullYear()} KidSecure. All rights reserved.<br />
+                This email was sent because your crèche was registered on the KidSecure platform.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function _haversineMeters(lat1, lon1, lat2, lon2) {
     const R = 6371000;

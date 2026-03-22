@@ -1,15 +1,18 @@
 import * as admin from "firebase-admin";
 import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
-import { onDocumentWritten } from "firebase-functions/v2/firestore";
+import { onDocumentWritten, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { defineSecret } from "firebase-functions/params";
 import * as jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import * as nodemailer from "nodemailer";
 
 admin.initializeApp();
 
 const db = admin.firestore();
 const INVITE_JWT_SECRET = defineSecret("INVITE_JWT_SECRET");
 const TRACKER_API_KEY = defineSecret("TRACKER_API_KEY");
+const SMTP_USER = defineSecret("SMTP_USER");
+const SMTP_PASS = defineSecret("SMTP_PASS");
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -458,6 +461,170 @@ async function _handleTrackerPing(
       apns: { payload: { aps: { sound: "default" } } },
     });
   }
+}
+
+// ── sendCrecheWelcomeEmail ────────────────────────────────────────────────────
+// Triggered when a new crèche document is created in Firestore.
+// Sends an onboarding welcome email to the crèche's registered email address.
+
+export const sendCrecheWelcomeEmail = onDocumentCreated(
+  { document: "creches/{crecheId}", secrets: [SMTP_USER, SMTP_PASS] },
+  async (event) => {
+    const data = event.data?.data();
+    if (!data) return;
+
+    const email = data.email as string | undefined;
+    if (!email) return; // no email address on this crèche — skip
+
+    const crecheName = (data.name as string | undefined) ?? "Your Crèche";
+    const address = [data.address, data.city, data.province]
+      .filter(Boolean)
+      .join(", ");
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: SMTP_USER.value(), pass: SMTP_PASS.value() },
+    });
+
+    await transporter.sendMail({
+      from: `"KidSecure" <${SMTP_USER.value()}>`,
+      to: email,
+      subject: `Welcome to KidSecure — ${crecheName} is live!`,
+      html: _buildWelcomeEmailHtml(crecheName, address),
+    });
+  }
+);
+
+// ── Email HTML template ───────────────────────────────────────────────────────
+
+function _buildWelcomeEmailHtml(crecheName: string, address: string): string {
+  const addressLine = address ? `<p style="margin:0 0 4px;font-size:14px;color:#6b7280;">${address}</p>` : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Welcome to KidSecure</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1B5286 0%,#2176C7 100%);padding:36px 40px;text-align:center;">
+              <h1 style="margin:0;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">KidSecure</h1>
+              <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.75);letter-spacing:0.5px;">Safe. Smart. Connected.</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 40px 28px;">
+              <h2 style="margin:0 0 6px;font-size:22px;font-weight:700;color:#111827;">Welcome aboard, ${crecheName}!</h2>
+              ${addressLine}
+              <p style="margin:20px 0 0;font-size:15px;line-height:1.7;color:#374151;">
+                Your crèche has been successfully registered on <strong>KidSecure</strong>.
+                You now have access to a complete school management platform built around
+                child safety, real-time GPS tracking, and seamless communication between
+                staff and parents.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 40px;">
+              <hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" />
+            </td>
+          </tr>
+
+          <!-- Next steps -->
+          <tr>
+            <td style="padding:28px 40px 8px;">
+              <h3 style="margin:0 0 20px;font-size:15px;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:0.8px;">Get started in 3 steps</h3>
+
+              <!-- Step 1 -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+                <tr>
+                  <td width="40" valign="top">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#1B5286;color:#fff;font-size:14px;font-weight:700;text-align:center;line-height:32px;">1</div>
+                  </td>
+                  <td style="padding-left:14px;">
+                    <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">Add your teachers</p>
+                    <p style="margin:4px 0 0;font-size:14px;color:#6b7280;line-height:1.5;">Invite your staff so they can sign children in and out and communicate with parents.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Step 2 -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+                <tr>
+                  <td width="40" valign="top">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#1B5286;color:#fff;font-size:14px;font-weight:700;text-align:center;line-height:32px;">2</div>
+                  </td>
+                  <td style="padding-left:14px;">
+                    <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">Enrol children</p>
+                    <p style="margin:4px 0 0;font-size:14px;color:#6b7280;line-height:1.5;">Register each child in your crèche and optionally assign a GPS tracker device to them.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Step 3 -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+                <tr>
+                  <td width="40" valign="top">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#1B5286;color:#fff;font-size:14px;font-weight:700;text-align:center;line-height:32px;">3</div>
+                  </td>
+                  <td style="padding-left:14px;">
+                    <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">Link parents &amp; guardians</p>
+                    <p style="margin:4px 0 0;font-size:14px;color:#6b7280;line-height:1.5;">Invite parents so they receive real-time check-in notifications and can track their child's location.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:24px 40px 0;">
+              <hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" />
+            </td>
+          </tr>
+
+          <!-- Support note -->
+          <tr>
+            <td style="padding:24px 40px 36px;">
+              <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
+                If you have any questions or need help setting up, reply to this email
+                and our support team will be happy to assist.
+              </p>
+              <p style="margin:18px 0 0;font-size:14px;color:#374151;">
+                Welcome to the KidSecure family 👋<br />
+                <strong>The KidSecure Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;padding:20px 40px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;">
+                © ${new Date().getFullYear()} KidSecure. All rights reserved.<br />
+                This email was sent because your crèche was registered on the KidSecure platform.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -92,6 +92,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/google_fonts/
 
 # ─── App Icon ────────────────────────────────────────────────────────────────
 flutter_launcher_icons:

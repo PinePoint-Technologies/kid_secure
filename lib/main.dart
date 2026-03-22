@@ -8,6 +8,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
@@ -45,6 +46,10 @@ class _FallbackDelegate<T> extends LocalizationsDelegate<T> {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Use locally bundled fonts — prevents network fetch failures in simulators
+  // or restricted network environments.
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // Lock to portrait (optional — remove for tablet support)
   await SystemChrome.setPreferredOrientations([
