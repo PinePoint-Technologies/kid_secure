@@ -9,7 +9,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/models/attendance_model.dart';
 import '../../../shared/models/child_model.dart';
 import '../../../shared/models/guardian_model.dart';
-import '../../../shared/services/firestore_service.dart';
 import '../../../shared/utils/pin_hasher.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/guardian_pin_dialog.dart';

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../core/providers/invite_provider.dart';
 import '../../../shared/models/user_model.dart';
-import '../../../shared/services/firestore_service.dart';
 import '../../../shared/services/invite_service.dart';
 
 // ── State ────────────────────────────────────────────────────────────────────

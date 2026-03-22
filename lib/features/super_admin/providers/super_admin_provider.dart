@@ -4,37 +4,30 @@ import '../../../shared/models/child_model.dart';
 import '../../../shared/models/creche_model.dart';
 import '../../../shared/models/guardian_model.dart';
 import '../../../shared/models/user_model.dart';
-import '../../../shared/services/admin_user_service.dart';
-import '../../../shared/services/firestore_service.dart';
 
-// ─── Basic entity streams ─────────────────────────────────────────────────────
+// ─── Entity streams ───────────────────────────────────────────────────────────
 
-// All creches stream
 final allCrechesProvider = StreamProvider<List<CrecheModel>>(
   (ref) => ref.watch(firestoreServiceProvider).watchAllCreches(),
 );
 
-// All teachers stream
 final allTeachersProvider = StreamProvider<List<UserModel>>(
   (ref) => ref.watch(firestoreServiceProvider).watchTeachers(),
 );
 
-// All children across every crèche
 final allChildrenProvider = StreamProvider<List<ChildModel>>(
   (ref) => ref.watch(firestoreServiceProvider).watchAllChildren(),
 );
 
-// All parent accounts
 final allParentsProvider = StreamProvider<List<UserModel>>(
   (ref) => ref.watch(firestoreServiceProvider).watchAllParents(),
 );
 
-// All guardians across every crèche
 final allGuardiansProvider = StreamProvider<List<GuardianModel>>(
   (ref) => ref.watch(firestoreServiceProvider).watchAllGuardians(),
 );
 
-// ─── Aggregated stats ─────────────────────────────────────────────────────────
+// ─── Aggregated dashboard stats ───────────────────────────────────────────────
 
 class AdminStats {
   final int crecheCount;
@@ -68,8 +61,11 @@ final adminStatsProvider = Provider<AsyncValue<AdminStats>>((ref) {
     return const AsyncValue.loading();
   }
 
-  final err = creches.error ?? teachers.error ?? children.error ??
-      parents.error ?? guardians.error;
+  final err = creches.error ??
+      teachers.error ??
+      children.error ??
+      parents.error ??
+      guardians.error;
   if (err != null) {
     return AsyncValue.error(err, StackTrace.current);
   }
@@ -82,247 +78,3 @@ final adminStatsProvider = Provider<AsyncValue<AdminStats>>((ref) {
     guardianCount: guardians.valueOrNull?.length ?? 0,
   ));
 });
-
-// Creche teachers — derived reactively so it updates when teacherIds changes.
-final crecheTeachersProvider =
-    Provider.family<AsyncValue<List<UserModel>>, String>((ref, crecheId) {
-  final crechesAsync = ref.watch(allCrechesProvider);
-  final teachersAsync = ref.watch(allTeachersProvider);
-
-  if (crechesAsync.isLoading || teachersAsync.isLoading) {
-    return const AsyncValue.loading();
-  }
-  if (crechesAsync.hasError) {
-    return AsyncValue.error(
-        crechesAsync.error!, crechesAsync.stackTrace ?? StackTrace.current);
-  }
-  if (teachersAsync.hasError) {
-    return AsyncValue.error(
-        teachersAsync.error!, teachersAsync.stackTrace ?? StackTrace.current);
-  }
-
-  final creche = crechesAsync.value!.cast<CrecheModel?>().firstWhere(
-        (c) => c?.id == crecheId,
-        orElse: () => null,
-      );
-  if (creche == null) return const AsyncValue.data([]);
-
-  final assigned = teachersAsync.value!
-      .where((t) => creche.teacherIds.contains(t.uid))
-      .toList();
-  return AsyncValue.data(assigned);
-});
-
-// ─── Creche Form Notifier ────────────────────────────────────────────────────
-class CrecheFormState {
-  final bool isLoading;
-  final String? error;
-  final bool isSuccess;
-
-  const CrecheFormState({
-    this.isLoading = false,
-    this.error,
-    this.isSuccess = false,
-  });
-
-  CrecheFormState copyWith({bool? isLoading, String? error, bool? isSuccess}) =>
-      CrecheFormState(
-        isLoading: isLoading ?? this.isLoading,
-        error: error ?? this.error,
-        isSuccess: isSuccess ?? this.isSuccess,
-      );
-}
-
-class CrecheFormNotifier extends Notifier<CrecheFormState> {
-  @override
-  CrecheFormState build() => const CrecheFormState();
-
-  FirestoreService get _service => ref.read(firestoreServiceProvider);
-
-  Future<void> save(CrecheModel creche, {String? existingId}) async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      if (existingId != null) {
-        final data = creche.toFirestore()..remove('teacherIds');
-        await _service.updateCreche(existingId, data);
-      } else {
-        await _service.createCreche(creche);
-      }
-      state = state.copyWith(isLoading: false, isSuccess: true);
-    } catch (e) {
-      state = state.copyWith(
-          isLoading: false, error: 'Failed to save creche. Please try again.');
-    }
-  }
-
-  Future<void> assignTeacher(String crecheId, String teacherUid) async {
-    try {
-      await _service.addTeacherToCreche(crecheId, teacherUid);
-      // Also update teacher's crecheIds
-      await _service.updateUser(teacherUid, {
-        'crecheIds': [crecheId],
-      });
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to assign teacher.');
-    }
-  }
-
-  Future<void> removeTeacher(String crecheId, String teacherUid) async {
-    try {
-      await _service.removeTeacherFromCreche(crecheId, teacherUid);
-      await _service.updateUser(teacherUid, {'crecheIds': []});
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to remove teacher.');
-    }
-  }
-
-  Future<void> deactivateCreche(String id) async {
-    try {
-      await _service.deactivateCreche(id);
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to deactivate crèche.');
-    }
-  }
-
-  Future<void> deactivateUser(String uid) async {
-    try {
-      await _service.deactivateUser(uid);
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to deactivate user.');
-    }
-  }
-
-  Future<void> deactivateChild(String id) async {
-    try {
-      await _service.deactivateChild(id);
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to deactivate child.');
-    }
-  }
-}
-
-final crecheFormProvider =
-    NotifierProvider<CrecheFormNotifier, CrecheFormState>(
-  CrecheFormNotifier.new,
-);
-
-// ─── Watch a single child by ID ───────────────────────────────────────────────
-final childByIdProvider =
-    StreamProvider.family<ChildModel?, String>((ref, childId) {
-  return ref.watch(firestoreServiceProvider).watchChildById(childId);
-});
-
-// ─── Admin User Creation ──────────────────────────────────────────────────────
-class AdminUserFormState {
-  final bool isLoading;
-  final String? error;
-  final bool isSuccess;
-
-  const AdminUserFormState({
-    this.isLoading = false,
-    this.error,
-    this.isSuccess = false,
-  });
-
-  AdminUserFormState copyWith({
-    bool? isLoading,
-    String? error,
-    bool? isSuccess,
-  }) =>
-      AdminUserFormState(
-        isLoading: isLoading ?? this.isLoading,
-        error: error,
-        isSuccess: isSuccess ?? this.isSuccess,
-      );
-}
-
-class AdminUserFormNotifier extends Notifier<AdminUserFormState> {
-  @override
-  AdminUserFormState build() => const AdminUserFormState();
-
-  AdminUserService get _service => ref.read(adminUserServiceProvider);
-
-  Future<void> createUser({
-    required String email,
-    required String password,
-    required String displayName,
-    required UserRole role,
-    String? phoneNumber,
-    List<String> crecheIds = const [],
-  }) async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      final user = await _service.createUser(
-        email: email,
-        password: password,
-        displayName: displayName,
-        role: role,
-        phoneNumber: phoneNumber,
-        crecheIds: crecheIds,
-      );
-      // For teachers, also update each crèche's teacherIds so the assignment
-      // screen shows them as assigned (not just the user doc's crecheIds).
-      if (role == UserRole.teacher && crecheIds.isNotEmpty) {
-        final db = ref.read(firestoreServiceProvider);
-        for (final crecheId in crecheIds) {
-          await db.addTeacherToCreche(crecheId, user.uid);
-        }
-      }
-      state = state.copyWith(isLoading: false, isSuccess: true);
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Failed to create account: ${e.toString()}',
-      );
-    }
-  }
-
-  void reset() => state = const AdminUserFormState();
-}
-
-final adminUserFormProvider =
-    NotifierProvider<AdminUserFormNotifier, AdminUserFormState>(
-  AdminUserFormNotifier.new,
-);
-
-// ─── Link Parent to Child ─────────────────────────────────────────────────────
-class LinkParentState {
-  final String? error;
-  const LinkParentState({this.error});
-}
-
-class LinkParentNotifier extends Notifier<LinkParentState> {
-  @override
-  LinkParentState build() => const LinkParentState();
-
-  FirestoreService get _db => ref.read(firestoreServiceProvider);
-
-  Future<void> link({
-    required String childId,
-    required String parentUid,
-    required String crecheId,
-  }) async {
-    try {
-      await _db.linkParentToChild(
-          childId: childId, parentUid: parentUid, crecheId: crecheId);
-    } catch (_) {
-      state = const LinkParentState(error: 'Failed to link parent.');
-    }
-  }
-
-  Future<void> unlink({
-    required String childId,
-    required String parentUid,
-  }) async {
-    try {
-      await _db.unlinkParentFromChild(childId: childId, parentUid: parentUid);
-    } catch (_) {
-      state = const LinkParentState(error: 'Failed to unlink parent.');
-    }
-  }
-}
-
-final linkParentProvider =
-    NotifierProvider<LinkParentNotifier, LinkParentState>(
-  LinkParentNotifier.new,
-);

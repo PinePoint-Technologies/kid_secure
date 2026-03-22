@@ -3,7 +3,6 @@ import '../../../core/providers/firebase_providers.dart';
 import '../../../shared/models/child_model.dart';
 import '../../../shared/models/attendance_model.dart';
 import '../../../shared/models/sick_leave_model.dart';
-import '../../../shared/services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // The teacher's current creche id (first assigned creche, or own UID as fallback)

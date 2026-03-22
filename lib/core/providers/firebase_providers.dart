@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../shared/services/firestore_service.dart';
 import '../../shared/services/admin_user_service.dart';
 
+// Re-export so any file importing firebase_providers also gets FirestoreService extensions.
+export '../../shared/services/firestore_service.dart';
+
 final firebaseAuthProvider = Provider<FirebaseAuth>(
   (_) => FirebaseAuth.instance,
 );

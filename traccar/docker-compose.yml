@@ -1,0 +1,16 @@
+services:
+  traccar:
+    image: traccar/traccar:latest
+    container_name: traccar
+    restart: unless-stopped
+    ports:
+      - "8082:8082"   # Web UI
+      - "5027:5027"   # Teltonika binary protocol (TCP)
+    volumes:
+      - ./traccar.xml:/opt/traccar/conf/traccar.xml:ro
+      - traccar-data:/opt/traccar/data
+      - traccar-logs:/opt/traccar/logs
+
+volumes:
+  traccar-data:
+  traccar-logs:

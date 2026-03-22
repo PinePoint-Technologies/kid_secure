@@ -326,84 +326,139 @@ export const trackerWebhook = onRequest(
       ...(batteryLevel != null && { batteryLevel }),
     };
 
-    const trackerRef = db.collection("trackers").doc(deviceId);
-
-    // ── Write latest snapshot + history sub-collection ────────────────────────
-    await Promise.all([
-      trackerRef.set(locationData, { merge: true }),
-      trackerRef.collection("locations").add(locationData),
-    ]);
-
-    // ── Geofence check ────────────────────────────────────────────────────────
-    const childSnap = await db
-      .collection("children")
-      .where("trackerId", "==", deviceId)
-      .where("status", "==", "active")
-      .limit(1)
-      .get();
-
-    if (childSnap.empty) {
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    const childDoc = childSnap.docs[0];
-    const childData = childDoc.data();
-    const childName = `${childData.firstName} ${childData.lastName}`;
-    const crecheId: string = childData.crecheId ?? "";
-    const parentIds: string[] = childData.parentIds ?? [];
-
-    const crecheSnap = await db.collection("creches").doc(crecheId).get();
-    if (!crecheSnap.exists) {
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    const crecheData = crecheSnap.data()!;
-    const cLat = crecheData.latitude as number | undefined;
-    const cLon = crecheData.longitude as number | undefined;
-    const radius = (crecheData.geofenceRadiusMeters as number | undefined) ?? 200;
-
-    if (cLat == null || cLon == null) {
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    const distanceM = _haversineMeters(lat, lon, cLat, cLon);
-    const withinGeofence = distanceM <= radius;
-
-    if (!withinGeofence) {
-      // Collect FCM tokens for all linked parents
-      const tokens: string[] = [];
-      for (const uid of parentIds) {
-        const userSnap = await db.collection("users").doc(uid).get();
-        if (!userSnap.exists) continue;
-        const fcmToken = userSnap.data()!.fcmToken as string | undefined;
-        if (fcmToken) tokens.push(fcmToken);
-      }
-
-      if (tokens.length > 0) {
-        await admin.messaging().sendEachForMulticast({
-          tokens,
-          notification: {
-            title: `⚠️ ${childName} left the crèche`,
-            body: `Tracker detected outside ${crecheData.name ?? "crèche"} boundary.`,
-          },
-          data: {
-            childId: childDoc.id,
-            crecheId,
-            event: "tracker_geofence_breach",
-            deviceId,
-          },
-          android: { priority: "high" },
-          apns: { payload: { aps: { sound: "default" } } },
-        });
-      }
-    }
-
+    await _handleTrackerPing(deviceId, lat, lon, locationData);
     res.status(200).json({ ok: true });
   }
 );
+
+// ── traccarWebhook ────────────────────────────────────────────────────────────
+// Receives position forwards from a self-hosted Traccar server.
+// Configure Traccar: forward.type=json, forward.url=<this URL>,
+//   forward.header=x-tracker-key: <TRACKER_API_KEY secret value>
+// Traccar POSTs: { position: { latitude, longitude, speed (knots),
+//   fixTime (ISO 8601), attributes: { battery } }, device: { uniqueId } }
+export const traccarWebhook = onRequest(
+  { secrets: [TRACKER_API_KEY] },
+  async (req, res) => {
+    const apiKey = req.headers["x-tracker-key"] as string | undefined;
+    if (!apiKey || apiKey !== TRACKER_API_KEY.value()) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const body = req.body as {
+      position?: {
+        latitude?: number;
+        longitude?: number;
+        speed?: number;    // knots
+        fixTime?: string;  // ISO 8601
+        attributes?: { battery?: number };
+      };
+      device?: { uniqueId?: string };
+    };
+
+    const deviceId = body.device?.uniqueId;
+    const lat = body.position?.latitude;
+    const lon = body.position?.longitude;
+
+    if (!deviceId || lat == null || lon == null) {
+      res.status(400).json({
+        error: "device.uniqueId, position.latitude and position.longitude are required.",
+      });
+      return;
+    }
+
+    const fixTime = body.position?.fixTime;
+    const recordedAt = fixTime
+      ? admin.firestore.Timestamp.fromDate(new Date(fixTime))
+      : admin.firestore.FieldValue.serverTimestamp();
+
+    // Traccar reports speed in knots — convert to m/s
+    const speedKnots = body.position?.speed;
+    const speedMs = speedKnots != null ? speedKnots * 0.514444 : undefined;
+    const batteryLevel = body.position?.attributes?.battery;
+
+    const locationData: Record<string, unknown> = {
+      lat,
+      lon,
+      recordedAt,
+      ...(speedMs != null && { speed: speedMs }),
+      ...(batteryLevel != null && { batteryLevel }),
+    };
+
+    await _handleTrackerPing(deviceId, lat, lon, locationData);
+    res.status(200).json({ ok: true });
+  }
+);
+
+// ── _handleTrackerPing ────────────────────────────────────────────────────────
+// Writes a tracker location to Firestore and sends a geofence-breach FCM
+// notification to linked parents when the device is outside the crèche boundary.
+async function _handleTrackerPing(
+  deviceId: string,
+  lat: number,
+  lon: number,
+  locationData: Record<string, unknown>
+): Promise<void> {
+  const trackerRef = db.collection("trackers").doc(deviceId);
+  await Promise.all([
+    trackerRef.set(locationData, { merge: true }),
+    trackerRef.collection("locations").add(locationData),
+  ]);
+
+  const childSnap = await db
+    .collection("children")
+    .where("trackerId", "==", deviceId)
+    .where("status", "==", "active")
+    .limit(1)
+    .get();
+
+  if (childSnap.empty) return;
+
+  const childDoc = childSnap.docs[0];
+  const childData = childDoc.data();
+  const childName = `${childData.firstName} ${childData.lastName}`;
+  const crecheId: string = childData.crecheId ?? "";
+  const parentIds: string[] = childData.parentIds ?? [];
+
+  const crecheSnap = await db.collection("creches").doc(crecheId).get();
+  if (!crecheSnap.exists) return;
+
+  const crecheData = crecheSnap.data()!;
+  const cLat = crecheData.latitude as number | undefined;
+  const cLon = crecheData.longitude as number | undefined;
+  const radius = (crecheData.geofenceRadiusMeters as number | undefined) ?? 200;
+
+  if (cLat == null || cLon == null) return;
+
+  if (_haversineMeters(lat, lon, cLat, cLon) <= radius) return;
+
+  const tokens: string[] = [];
+  for (const uid of parentIds) {
+    const userSnap = await db.collection("users").doc(uid).get();
+    if (!userSnap.exists) continue;
+    const fcmToken = userSnap.data()!.fcmToken as string | undefined;
+    if (fcmToken) tokens.push(fcmToken);
+  }
+
+  if (tokens.length > 0) {
+    await admin.messaging().sendEachForMulticast({
+      tokens,
+      notification: {
+        title: `⚠️ ${childName} left the crèche`,
+        body: `Tracker detected outside ${crecheData.name ?? "crèche"} boundary.`,
+      },
+      data: {
+        childId: childDoc.id,
+        crecheId,
+        event: "tracker_geofence_breach",
+        deviceId,
+      },
+      android: { priority: "high" },
+      apns: { payload: { aps: { sound: "default" } } },
+    });
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

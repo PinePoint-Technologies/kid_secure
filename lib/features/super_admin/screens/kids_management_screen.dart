@@ -10,6 +10,7 @@ import '../../../shared/models/child_model.dart';
 import '../../../shared/models/creche_model.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../core/providers/firebase_providers.dart';
+import '../providers/creche_provider.dart';
 import '../providers/super_admin_provider.dart';
 
 class KidsManagementScreen extends ConsumerWidget {
@@ -90,7 +91,7 @@ class _KidCard extends ConsumerWidget {
     final controller = TextEditingController(text: child.trackerId ?? '');
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text('Tracker for ${child.firstName}'),
         content: TextField(
           controller: controller,
@@ -104,16 +105,16 @@ class _KidCard extends ConsumerWidget {
         actions: [
           if (child.trackerId != null)
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               style: TextButton.styleFrom(foregroundColor: AppColors.error),
               child: const Text('Remove Tracker'),
             ),
           TextButton(
-            onPressed: () => Navigator.pop(context, null),
+            onPressed: () => Navigator.pop(dialogContext, null),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Save'),
           ),
         ],
@@ -138,17 +139,17 @@ class _KidCard extends ConsumerWidget {
       BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Remove Kid'),
         content: Text(
             'Mark ${child.fullName} as inactive? This will remove them from attendance lists.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Deactivate'),
           ),
@@ -191,24 +192,25 @@ class _KidCard extends ConsumerWidget {
                           color: AppColors.primary),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
+                if (child.classGroup != null) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withAlpha(20),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(child.classGroup!,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        )),
+                  ),
+                ],
               ],
             ),
           ),
-          if (child.classGroup != null)
-            Container(
-              margin: const EdgeInsets.only(right: 4),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withAlpha(20),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(child.classGroup!,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  )),
-            ),
           IconButton(
             icon: const Icon(Icons.link_rounded),
             color: AppColors.parent,

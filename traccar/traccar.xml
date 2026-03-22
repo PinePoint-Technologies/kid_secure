@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE properties SYSTEM 'http://java.sun.com/dtd/properties.dtd'>
+<properties>
+
+  <!--
+    ┌─────────────────────────────────────────────────────────────────┐
+    │  KidSecure — Traccar middleware config                          │
+    │                                                                 │
+    │  Replace the two placeholders below before starting:           │
+    │    REGION-PROJECT_ID  →  e.g. us-central1-kidsecure-abc12      │
+    │    YOUR_TRACKER_API_KEY →  value of the TRACKER_API_KEY secret  │
+    └─────────────────────────────────────────────────────────────────┘
+
+    Teltonika FMB003 connects to this server on TCP port 5027.
+    Traccar decodes the binary Codec8 payload and forwards each
+    position to the Firebase traccarWebhook Cloud Function as JSON.
+  -->
+
+  <!-- ── Forward every position to Firebase ──────────────────────── -->
+  <entry key='forward.enable'>true</entry>
+  <entry key='forward.url'>https://REGION-PROJECT_ID.cloudfunctions.net/traccarWebhook</entry>
+  <entry key='forward.type'>json</entry>
+  <entry key='forward.header'>x-tracker-key: YOUR_TRACKER_API_KEY</entry>
+
+  <!-- ── Retry on transient failures (e.g. cold-start latency) ───── -->
+  <entry key='forward.retry.enable'>true</entry>
+  <entry key='forward.retry.count'>5</entry>
+  <entry key='forward.retry.delay'>2000</entry>
+
+</properties>

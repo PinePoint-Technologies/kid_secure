@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../shared/models/user_model.dart';
-import '../../../shared/services/firestore_service.dart';
 
 // ─── Current user profile ────────────────────────────────────────────────────
 final currentUserProvider = StreamProvider<UserModel?>((ref) {
